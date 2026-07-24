@@ -1,1 +1,16 @@
-# Models are registered here as they're added, so Flask-Migrate can see them.
+from app.models.user import User, RoleEnum
+from app.models.teacher import Teacher
+from app.models.parent import Parent
+from app.models.student import Student
+from app.models.academic import SchoolClass, Subject, ClassSubjectTeacher
+
+__all__ = [
+    "User",
+    "RoleEnum",
+    "Teacher",
+    "Parent",
+    "Student",
+    "SchoolClass",
+    "Subject",
+    "ClassSubjectTeacher",
+]

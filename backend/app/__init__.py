@@ -14,4 +14,6 @@ def create_app(config_class=Config):
     from app.routes.health import health_bp
     app.register_blueprint(health_bp)
 
+    from app import models  # noqa: F401  registers models with SQLAlchemy metadata
+
     return app
