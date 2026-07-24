@@ -1,0 +1,34 @@
+from marshmallow import Schema, ValidationError, fields, validate, validates_schema
+
+from app.models.user import RoleEnum
+
+CREATABLE_ROLES = [RoleEnum.TEACHER.value, RoleEnum.PARENT.value, RoleEnum.STUDENT.value]
+
+
+class LoginSchema(Schema):
+    email = fields.Email(required=True)
+    password = fields.String(required=True, validate=validate.Length(min=1))
+
+
+class SignupSchema(Schema):
+    role = fields.String(required=True, validate=validate.OneOf(CREATABLE_ROLES))
+    full_name = fields.String(required=True, validate=validate.Length(min=1, max=120))
+    email = fields.Email(required=True)
+    password = fields.String(required=True, validate=validate.Length(min=6))
+    phone = fields.String(load_default=None, allow_none=True, validate=validate.Length(max=20))
+
+    # student-only
+    admission_no = fields.String(load_default=None, allow_none=True, validate=validate.Length(max=30))
+    dob = fields.Date(load_default=None, allow_none=True)
+    gender = fields.String(load_default=None, allow_none=True, validate=validate.Length(max=20))
+    class_id = fields.Integer(load_default=None, allow_none=True)
+    parent_id = fields.Integer(load_default=None, allow_none=True)
+
+    # parent-only
+    occupation = fields.String(load_default=None, allow_none=True, validate=validate.Length(max=120))
+    address = fields.String(load_default=None, allow_none=True, validate=validate.Length(max=255))
+
+    @validates_schema
+    def validate_student_fields(self, data, **kwargs):
+        if data.get("role") == RoleEnum.STUDENT.value and not data.get("admission_no"):
+            raise ValidationError("admission_no is required for student accounts", field_name="admission_no")
