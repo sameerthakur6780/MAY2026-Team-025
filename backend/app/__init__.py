@@ -23,12 +23,33 @@ def create_app(config_class=Config):
     def ratelimit_handler(exc):
         return jsonify({"error": "rate_limited", "message": str(exc.description)}), 429
 
+    from app.services.auth_service import AuthError
+    from app.utils.errors import ApiError
+
+    @app.errorhandler(ApiError)
+    @app.errorhandler(AuthError)
+    def handle_api_error(exc):
+        return jsonify({"error": exc.code, "message": str(exc)}), exc.status_code
+
     from app.utils import jwt_callbacks  # noqa: F401  registers JWT loader callbacks
 
+    from app.routes.assignments import assignments_bp
     from app.routes.auth import auth_bp
+    from app.routes.classes import classes_bp
     from app.routes.health import health_bp
+    from app.routes.parents import parents_bp
+    from app.routes.students import students_bp
+    from app.routes.subjects import subjects_bp
+    from app.routes.teachers import teachers_bp
+
     app.register_blueprint(health_bp)
     app.register_blueprint(auth_bp)
+    app.register_blueprint(students_bp)
+    app.register_blueprint(teachers_bp)
+    app.register_blueprint(parents_bp)
+    app.register_blueprint(classes_bp)
+    app.register_blueprint(subjects_bp)
+    app.register_blueprint(assignments_bp)
 
     from app.cli import create_admin
     app.cli.add_command(create_admin)

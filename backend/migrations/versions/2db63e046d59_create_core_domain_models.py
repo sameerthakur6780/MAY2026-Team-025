@@ -1,8 +1,8 @@
 """create core domain models
 
-Revision ID: 9792d420a78f
+Revision ID: 2db63e046d59
 Revises: 
-Create Date: 2026-07-24 17:47:38.633192
+Create Date: 2026-07-24 21:28:15.585578
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '9792d420a78f'
+revision = '2db63e046d59'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -21,15 +21,13 @@ def upgrade():
     op.create_table('classes',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('grade', sa.Integer(), nullable=False),
-    sa.Column('section', sa.String(length=10), nullable=False),
     sa.Column('created_at', sa.DateTime(), nullable=False),
     sa.Column('updated_at', sa.DateTime(), nullable=False),
     sa.CheckConstraint('grade >= 1 AND grade <= 12', name='ck_classes_grade_range'),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('grade', 'section', name='uq_classes_grade_section')
+    sa.PrimaryKeyConstraint('id')
     )
     with op.batch_alter_table('classes', schema=None) as batch_op:
-        batch_op.create_index(batch_op.f('ix_classes_grade'), ['grade'], unique=False)
+        batch_op.create_index(batch_op.f('ix_classes_grade'), ['grade'], unique=True)
 
     op.create_table('subjects',
     sa.Column('id', sa.Integer(), nullable=False),

@@ -5,13 +5,11 @@ from app.models.mixins import TimestampMixin
 class SchoolClass(db.Model, TimestampMixin):
     __tablename__ = "classes"
     __table_args__ = (
-        db.UniqueConstraint("grade", "section", name="uq_classes_grade_section"),
         db.CheckConstraint("grade >= 1 AND grade <= 12", name="ck_classes_grade_range"),
     )
 
     id = db.Column(db.Integer, primary_key=True)
-    grade = db.Column(db.Integer, nullable=False, index=True)
-    section = db.Column(db.String(10), nullable=False)
+    grade = db.Column(db.Integer, nullable=False, unique=True, index=True)
 
     students = db.relationship("Student", back_populates="school_class")
     class_subjects = db.relationship(
@@ -19,7 +17,7 @@ class SchoolClass(db.Model, TimestampMixin):
     )
 
     def __repr__(self):
-        return f"<SchoolClass grade={self.grade} section={self.section}>"
+        return f"<SchoolClass grade={self.grade}>"
 
 
 class Subject(db.Model, TimestampMixin):
