@@ -34,3 +34,13 @@ class Config:
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(minutes=15)
     JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)
     JWT_REFRESH_COOKIE_PATH = "/api/auth/refresh"
+
+    SUPABASE_URL = os.environ.get("PROJECT_URL")
+    SUPABASE_SERVICE_ROLE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+    SUPABASE_BUCKET_NAME = os.environ.get("SUPABASE_BUCKET_NAME", "secure-uploads")
+
+    MAX_UPLOAD_SIZE_BYTES = 20 * 1024 * 1024
+    ALLOWED_UPLOAD_EXTENSIONS = {"pdf", "jpg", "jpeg", "png", "doc", "docx", "txt"}
+    RESOURCE_SIGNED_URL_EXPIRY_SECONDS = 300
+   
+    MAX_CONTENT_LENGTH = MAX_UPLOAD_SIZE_BYTES + 1 * 1024 * 1024

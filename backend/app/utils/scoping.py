@@ -20,6 +20,13 @@ def current_parent():
     return parent
 
 
+def current_student():
+    student = current_user.student
+    if student is None:
+        raise forbidden("No student profile is linked to this account")
+    return student
+
+
 def teacher_class_ids(teacher):
     """Distinct ids of classes this teacher is assigned to via
     class_subject_teacher."""

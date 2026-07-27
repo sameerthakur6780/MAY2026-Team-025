@@ -23,6 +23,10 @@ def create_app(config_class=Config):
     def ratelimit_handler(exc):
         return jsonify({"error": "rate_limited", "message": str(exc.description)}), 429
 
+    @app.errorhandler(413)
+    def payload_too_large_handler(exc):
+        return jsonify({"error": "file_too_large", "message": "Upload exceeds the maximum allowed size"}), 413
+
     from app.services.auth_service import AuthError
     from app.utils.errors import ApiError
 
@@ -38,6 +42,7 @@ def create_app(config_class=Config):
     from app.routes.classes import classes_bp
     from app.routes.health import health_bp
     from app.routes.parents import parents_bp
+    from app.routes.resources import resources_bp
     from app.routes.students import students_bp
     from app.routes.subjects import subjects_bp
     from app.routes.teachers import teachers_bp
@@ -50,6 +55,7 @@ def create_app(config_class=Config):
     app.register_blueprint(classes_bp)
     app.register_blueprint(subjects_bp)
     app.register_blueprint(assignments_bp)
+    app.register_blueprint(resources_bp)
 
     from app.cli import create_admin
     app.cli.add_command(create_admin)
