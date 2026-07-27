@@ -4,6 +4,7 @@ from app.models.parent import Parent
 from app.models.student import Student
 from app.models.academic import SchoolClass, Subject, ClassSubjectTeacher
 from app.models.resource import Resource, ResourceType
+from app.models.attendance import Attendance, AttendanceStatus, AttendanceMethod
 
 __all__ = [
     "User",
@@ -16,4 +17,7 @@ __all__ = [
     "ClassSubjectTeacher",
     "Resource",
     "ResourceType",
+    "Attendance",
+    "AttendanceStatus",
+    "AttendanceMethod",
 ]
