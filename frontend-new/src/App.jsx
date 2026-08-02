@@ -8,6 +8,8 @@ import Landing from "@/pages/Landing";
 import Login from "@/pages/Login";
 import Signup from "@/pages/Signup";
 
+import TeacherDashboard from "@/pages/teacher/Dashboard";
+
 import AdminDashboard from "@/pages/admin/Dashboard";
 import AdminFinance from "@/pages/admin/Finance";
 import AdminAttendance from "@/pages/admin/Attendance";
@@ -44,6 +46,8 @@ function App() {
             <Route path="/admin/homework" element={<ProtectedRoute role="admin"><AdminHomework /></ProtectedRoute>} />
             <Route path="/admin/grading" element={<ProtectedRoute role="admin"><AdminGrading /></ProtectedRoute>} />
             <Route path="/admin/alerts" element={<ProtectedRoute role="admin"><AdminAlerts /></ProtectedRoute>} />
+
+            <Route path="/teacher/dashboard" element={<ProtectedRoute role="teacher"><TeacherDashboard /></ProtectedRoute>} />
 
             <Route path="/parent/dashboard" element={<ProtectedRoute role="parent"><ParentDashboard /></ProtectedRoute>} />
             <Route path="/parent/safety" element={<ProtectedRoute role="parent"><ParentSafety /></ProtectedRoute>} />

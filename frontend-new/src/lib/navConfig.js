@@ -10,6 +10,10 @@ export const ADMIN_NAV = [
   { to: "/admin/alerts", key: "admin-alerts", label: "Alerts", icon: Megaphone },
 ];
 
+export const TEACHER_NAV = [
+  { to: "/teacher/dashboard", key: "teacher-dashboard", label: "Dashboard", icon: LayoutDashboard },
+];
+
 export const PARENT_NAV = [
   { to: "/parent/dashboard", key: "parent-dashboard", label: "Overview", icon: LayoutDashboard },
   { to: "/parent/safety", key: "parent-safety", label: "Safety Feed", icon: Bell },
