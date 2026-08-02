@@ -11,6 +11,7 @@ from app.services.student_service import (
     list_students_query,
     serialize_student,
     update_student,
+    upload_profile_image,
 )
 from app.utils.decorators import role_required
 from app.utils.pagination import paginate_query
@@ -86,3 +87,11 @@ def update_student_route(student_id):
 def delete_student_route(student_id):
     delete_student(student_id)
     return "", 204
+
+
+@students_bp.post("/<int:student_id>/profile-image")
+@role_required("admin")
+def upload_profile_image_route(student_id):
+    file_storage = request.files.get("file")
+    student = upload_profile_image(student_id, file_storage)
+    return jsonify(serialize_student(student)), 200

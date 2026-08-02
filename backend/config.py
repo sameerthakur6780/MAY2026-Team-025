@@ -22,7 +22,11 @@ class Config:
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL") or "sqlite:///" + DEFAULT_DB_PATH
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-    FRONTEND_ORIGIN = os.environ.get("FRONTEND_ORIGIN", "http://localhost:3000")
+    FRONTEND_ORIGINS = [
+        origin.strip()
+        for origin in os.environ.get("FRONTEND_ORIGIN", "http://localhost:3000,http://localhost:5173").split(",")
+        if origin.strip()
+    ]
 
     RATELIMIT_STORAGE_URI = os.environ.get("RATELIMIT_STORAGE_URI", "memory://")
 
@@ -42,5 +46,12 @@ class Config:
     MAX_UPLOAD_SIZE_BYTES = 20 * 1024 * 1024
     ALLOWED_UPLOAD_EXTENSIONS = {"pdf", "jpg", "jpeg", "png", "doc", "docx", "txt"}
     RESOURCE_SIGNED_URL_EXPIRY_SECONDS = 300
-   
+
     MAX_CONTENT_LENGTH = MAX_UPLOAD_SIZE_BYTES + 1 * 1024 * 1024
+
+    FACE_IMAGE_ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png"}
+    FACE_MODEL_NAME = os.environ.get("FACE_MODEL_NAME", "VGG-Face")
+    FACE_DETECTOR_BACKEND = os.environ.get("FACE_DETECTOR_BACKEND", "opencv")
+    # Cosine similarity in [0, 1]. Tuned empirically against this model.
+    FACE_HIGH_CONFIDENCE_THRESHOLD = float(os.environ.get("FACE_HIGH_CONFIDENCE_THRESHOLD", "0.60"))
+    FACE_LOW_CONFIDENCE_THRESHOLD = float(os.environ.get("FACE_LOW_CONFIDENCE_THRESHOLD", "0.40"))

@@ -14,6 +14,10 @@ class Student(db.Model, TimestampMixin):
     parent_id = db.Column(db.Integer, db.ForeignKey("parents.id"), index=True)
     profile_image = db.Column(db.String(255))
     status = db.Column(db.String(20), nullable=False, default="active")
+    # 128/2622/512-d (model-dependent) face embedding computed once when the
+    # profile photo is uploaded -- see app/services/facial_recognition.
+    # Never recomputed on read; only replaced when the photo changes.
+    face_embedding = db.Column(db.JSON, nullable=True)
 
     user = db.relationship("User", back_populates="student")
     school_class = db.relationship("SchoolClass", back_populates="students")

@@ -5,9 +5,11 @@ from flask_jwt_extended import current_user, get_jwt
 from marshmallow import ValidationError
 
 from app.schemas.attendance_schema import AttendanceBulkSchema, AttendanceUpdateSchema
+from app.schemas.facial_attendance_schema import FacialAttendanceSchema
 from app.services.attendance_service import (
     bulk_mark_attendance,
     list_attendance_query,
+    mark_attendance_facial,
     serialize_attendance,
     update_attendance,
 )
@@ -18,6 +20,7 @@ attendance_bp = Blueprint("attendance", __name__, url_prefix="/api/attendance")
 
 _bulk_schema = AttendanceBulkSchema()
 _update_schema = AttendanceUpdateSchema()
+_facial_schema = FacialAttendanceSchema()
 
 _ALL_ROLES = ("admin", "teacher", "parent", "student")
 
@@ -86,6 +89,20 @@ def bulk_mark():
         ),
         201,
     )
+
+
+@attendance_bp.post("/facial")
+@role_required("admin", "teacher")
+def mark_attendance_facial_route():
+    raw = request.form.to_dict()
+    try:
+        data = _facial_schema.load(raw)
+    except ValidationError as exc:
+        return jsonify({"error": "validation_error", "message": exc.messages}), 400
+
+    file_storage = request.files.get("image")
+    result = mark_attendance_facial(data["class_id"], data["date"], file_storage, current_user.id)
+    return jsonify(result), 200
 
 
 @attendance_bp.patch("/<int:attendance_id>")

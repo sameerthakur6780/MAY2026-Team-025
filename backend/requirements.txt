@@ -8,3 +8,8 @@ Flask-Cors==6.0.5
 Flask-Limiter==4.1.1
 marshmallow==4.3.0
 supabase==2.31.0
+deepface==0.0.100
+tensorflow==2.21.0
+tf_keras==2.21.0
+opencv-python==4.14.0.94
+numpy==2.5.1
