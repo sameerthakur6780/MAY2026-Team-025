@@ -9,6 +9,7 @@ import Login from "@/pages/Login";
 import Signup from "@/pages/Signup";
 
 import TeacherDashboard from "@/pages/teacher/Dashboard";
+import TeacherResources from "@/pages/teacher/Resources";
 
 import AdminDashboard from "@/pages/admin/Dashboard";
 import AdminStudents from "@/pages/admin/Students";
@@ -27,6 +28,7 @@ import ParentDashboard from "@/pages/parent/Dashboard";
 import ParentSafety from "@/pages/parent/Safety";
 import ParentFees from "@/pages/parent/Fees";
 import ParentPerformance from "@/pages/parent/Performance";
+import ParentResources from "@/pages/parent/Resources";
 
 import StudentDashboard from "@/pages/student/Dashboard";
 import StudentResources from "@/pages/student/Resources";
@@ -58,11 +60,13 @@ function App() {
             <Route path="/admin/alerts" element={<ProtectedRoute role="admin"><AdminAlerts /></ProtectedRoute>} />
 
             <Route path="/teacher/dashboard" element={<ProtectedRoute role="teacher"><TeacherDashboard /></ProtectedRoute>} />
+            <Route path="/teacher/resources" element={<ProtectedRoute role="teacher"><TeacherResources /></ProtectedRoute>} />
 
             <Route path="/parent/dashboard" element={<ProtectedRoute role="parent"><ParentDashboard /></ProtectedRoute>} />
             <Route path="/parent/safety" element={<ProtectedRoute role="parent"><ParentSafety /></ProtectedRoute>} />
             <Route path="/parent/fees" element={<ProtectedRoute role="parent"><ParentFees /></ProtectedRoute>} />
             <Route path="/parent/performance" element={<ProtectedRoute role="parent"><ParentPerformance /></ProtectedRoute>} />
+            <Route path="/parent/resources" element={<ProtectedRoute role="parent"><ParentResources /></ProtectedRoute>} />
 
             <Route path="/student/dashboard" element={<ProtectedRoute role="student"><StudentDashboard /></ProtectedRoute>} />
             <Route path="/student/resources" element={<ProtectedRoute role="student"><StudentResources /></ProtectedRoute>} />

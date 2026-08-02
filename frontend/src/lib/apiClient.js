@@ -1,5 +1,5 @@
 
-const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+export const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
@@ -15,15 +15,12 @@ export class ApiError extends Error {
   }
 }
 
-function getCookie(name) {
+export function getCookie(name) {
   const match = document.cookie.match(new RegExp("(?:^|; )" + name + "=([^;]*)"));
   return match ? decodeURIComponent(match[1]) : null;
 }
 
-// marshmallow validation errors come back as {field: [msg, ...]}, not a
-// string -- format them into one readable line so ApiError.message is
-// always safe to show directly in a toast.
-function formatErrorMessage(rawMessage, fallback) {
+export function formatErrorMessage(rawMessage, fallback) {
   if (typeof rawMessage === "string") return rawMessage;
   if (rawMessage && typeof rawMessage === "object") {
     return Object.entries(rawMessage)
@@ -77,8 +74,6 @@ async function rawRequest(path, { method = "GET", body } = {}) {
   return data;
 }
 
-// Concurrent 401s should trigger exactly one refresh call, not one per
-// request -- everyone waits on the same in-flight promise.
 let refreshPromise = null;
 
 function refreshAccessToken() {

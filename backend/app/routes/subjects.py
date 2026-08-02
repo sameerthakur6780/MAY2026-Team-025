@@ -19,14 +19,14 @@ _subject_schema = SubjectSchema()
 
 
 @subjects_bp.get("")
-@role_required("admin")
+@role_required("admin", "teacher", "parent", "student")
 def list_subjects():
     query = Subject.query.order_by(Subject.name)
     return jsonify(paginate_query(query, serialize_subject)), 200
 
 
 @subjects_bp.get("/<int:subject_id>")
-@role_required("admin")
+@role_required("admin", "teacher", "parent", "student")
 def get_subject(subject_id):
     subject = get_subject_or_404(subject_id)
     return jsonify(serialize_subject(subject)), 200

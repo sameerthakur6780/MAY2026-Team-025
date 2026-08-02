@@ -17,6 +17,7 @@ export const ADMIN_NAV = [
 
 export const TEACHER_NAV = [
   { to: "/teacher/dashboard", key: "teacher-dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/teacher/resources", key: "teacher-resources", label: "Resources", icon: FolderOpen },
 ];
 
 export const PARENT_NAV = [
@@ -24,6 +25,7 @@ export const PARENT_NAV = [
   { to: "/parent/safety", key: "parent-safety", label: "Safety Feed", icon: Bell },
   { to: "/parent/fees", key: "parent-fees", label: "Fees & Pay", icon: Wallet },
   { to: "/parent/performance", key: "parent-performance", label: "Performance", icon: LineChart },
+  { to: "/parent/resources", key: "parent-resources", label: "Resources", icon: FolderOpen },
 ];
 
 export const STUDENT_NAV = [
