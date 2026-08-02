@@ -5,14 +5,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
-import { QrCode, Wallet, CheckCircle2 } from "lucide-react";
+import { QrCode, Wallet } from "lucide-react";
 import { toast } from "sonner";
 
 const statusColor = { paid: "bg-sage/60 text-forest", pending: "bg-[#FDE8DC] text-terracotta", overdue: "bg-[#FBD5D5] text-[#B23A48]" };
 
 export default function ParentFees() {
   const upcoming = FEE_RECORDS.filter(f => f.status !== "paid");
-  const paid = FEE_RECORDS.filter(f => f.status === "paid");
   const totalDue = upcoming.reduce((a, b) => a + b.amount, 0);
 
   return (

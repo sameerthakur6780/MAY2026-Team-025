@@ -1,9 +1,9 @@
-import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, BarChart, Bar } from "recharts";
+import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { Wallet, Users, TrendingUp, AlertCircle, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import DashboardLayout from "@/components/DashboardLayout";
 import { ADMIN_NAV } from "@/lib/navConfig";
-import { MONTHLY_EARNINGS, FEE_RECORDS, BATCHES, ANNOUNCEMENTS } from "@/lib/mockData";
+import { MONTHLY_EARNINGS, BATCHES, ANNOUNCEMENTS } from "@/lib/mockData";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 

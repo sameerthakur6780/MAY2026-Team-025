@@ -1,70 +1,60 @@
-# Getting Started with Create React App
+# EduCore — Frontend
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A tutoring-centre management platform with three role-based portals (Admin/Tutor, Parent, Student), covering finance, AI-simulated attendance/grading, resources, homework and an AI assistant demo.
 
-## Available Scripts
+Built with React 19, Vite, Tailwind CSS and shadcn/ui. This is a frontend-only demo: all data lives in `src/lib/mockData.js` and sessions are stored in `localStorage` — there is no backend.
 
-In the project directory, you can run:
+## Stack
 
-### `npm start`
+- **Vite** — dev server and build
+- **React 19** + **React Router 7** — SPA routing
+- **Tailwind CSS 3** + **shadcn/ui** (Radix primitives) — UI components
+- **Recharts** — dashboard charts
+- **Sonner** — toast notifications
+- **Bun** — package manager / dev runtime (npm/yarn/pnpm also work)
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+## Getting started
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+```bash
+bun install
+bun dev       # start the dev server (http://localhost:5173)
+bun run build # production build to dist/
+bun run preview  # preview the production build locally
+```
 
-### `npm test`
+Using npm instead:
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+```bash
+npm install
+npm run dev
+npm run build
+```
 
-### `npm run build`
+## Project structure
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+```
+src/
+├── main.jsx                 entry point
+├── App.jsx                  routes + top-level layout
+├── components/
+│   ├── DashboardLayout.jsx  shared sidebar + header for all portal pages
+│   └── ui/                  shadcn/ui components (button, dialog, select, table, ...)
+├── lib/
+│   ├── store.js             localStorage session helpers (login/logout/role routing)
+│   ├── navConfig.js         per-role sidebar nav definitions
+│   ├── mockData.js          all demo data + the mock AI assistant reply logic
+│   └── utils.js             `cn()` class-merge helper (shadcn convention)
+└── pages/
+    ├── Landing.jsx, Login.jsx, Signup.jsx
+    ├── admin/                Dashboard, Finance, Attendance, Resources, Homework, Grading, Alerts
+    ├── parent/               Dashboard, Safety, Fees, Performance
+    └── student/              Dashboard, Resources, Homework, Assistant
+```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+## Adding shadcn/ui components
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+```bash
+bunx shadcn@latest add <component>
+```
 
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
-
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+This project only includes the shadcn components actually used by the app (button, input, label, card, badge, table, select, textarea, progress, dialog) — add more as needed rather than bulk-generating the full set.

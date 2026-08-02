@@ -3,9 +3,8 @@ import { PARENT_NAV } from "@/lib/navConfig";
 import { STUDENT_PERFORMANCE, HOMEWORK, UPCOMING_TESTS } from "@/lib/mockData";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
-import { CheckCircle2, Clock, BookOpen, CalendarCheck } from "lucide-react";
+import { CheckCircle2, BookOpen, CalendarCheck } from "lucide-react";
 
 export default function ParentPerformance() {
   const avg = Math.round(STUDENT_PERFORMANCE.reduce((a, b) => a + b.score, 0) / STUDENT_PERFORMANCE.length);
