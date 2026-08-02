@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { GraduationCap, Users, ShieldCheck, ArrowLeft } from "lucide-react";
+import { GraduationCap, Users, ShieldCheck, Presentation, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,6 +11,7 @@ import { ApiError } from "@/lib/apiClient";
 
 const ROLES = [
   { key: "admin", label: "Admin / Tutor", icon: ShieldCheck },
+  { key: "teacher", label: "Teacher", icon: Presentation },
   { key: "parent", label: "Parent", icon: Users },
   { key: "student", label: "Student", icon: GraduationCap },
 ];
@@ -92,7 +93,7 @@ export default function Login() {
           <p className="text-[#5C5C5C] mt-2">Continue to your EduCore portal</p>
 
           {/* Role tabs */}
-          <div className="mt-8 grid grid-cols-3 gap-2 p-1 bg-[#F0EEE8] rounded-xl">
+          <div className="mt-8 grid grid-cols-4 gap-2 p-1 bg-[#F0EEE8] rounded-xl">
             {ROLES.map((r) => (
               <button
                 key={r.key}
