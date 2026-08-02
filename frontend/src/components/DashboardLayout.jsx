@@ -1,14 +1,15 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import { LogOut, GraduationCap } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getSession, clearSession, ROLE_LABEL } from "@/lib/store";
+import { ROLE_LABEL } from "@/lib/store";
+import { useAuth } from "@/context/AuthContext";
 
 export default function DashboardLayout({ title, subtitle, nav, children }) {
   const navigate = useNavigate();
-  const session = getSession();
+  const { user, logout: logoutRequest } = useAuth();
 
-  const logout = () => {
-    clearSession();
+  const logout = async () => {
+    await logoutRequest();
     navigate("/");
   };
 
@@ -24,7 +25,7 @@ export default function DashboardLayout({ title, subtitle, nav, children }) {
             <div>
               <div className="font-display font-bold text-forest text-lg leading-none">EduCore</div>
               <div className="text-[10px] tracking-[0.2em] uppercase text-[#5C5C5C] mt-1">
-                {ROLE_LABEL[session?.role] || "Portal"}
+                {ROLE_LABEL[user?.role] || "Portal"}
               </div>
             </div>
           </div>
@@ -53,11 +54,11 @@ export default function DashboardLayout({ title, subtitle, nav, children }) {
         <div className="px-4 py-4 border-t border-soft">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-9 h-9 rounded-full bg-sage flex items-center justify-center text-forest font-semibold text-sm">
-              {(session?.name || "U").slice(0, 1).toUpperCase()}
+              {(user?.full_name || "U").slice(0, 1).toUpperCase()}
             </div>
             <div className="min-w-0">
-              <div className="text-sm font-medium truncate">{session?.name || "User"}</div>
-              <div className="text-xs text-[#5C5C5C] truncate">{session?.email}</div>
+              <div className="text-sm font-medium truncate">{user?.full_name || "User"}</div>
+              <div className="text-xs text-[#5C5C5C] truncate">{user?.email}</div>
             </div>
           </div>
           <Button

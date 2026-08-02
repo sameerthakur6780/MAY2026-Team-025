@@ -59,7 +59,7 @@ code {
     }
 }
 
-/* Custom utility classes matching design_guidelines palette */
+/* Custom utility classes matching the EduCore palette */
 .bg-canvas { background-color: #F9F8F6; }
 .bg-surface { background-color: #FFFFFF; }
 .text-forest { color: #1E3F33; }
@@ -81,7 +81,7 @@ code {
     animation: fadeInUp 0.5s ease-out both;
 }
 
-/* Grain texture overlay (optional) */
+/* Grain texture overlay */
 .grain-bg {
     background-image:
         radial-gradient(circle at 20% 20%, rgba(30, 63, 51, 0.04) 1px, transparent 1px),
@@ -94,17 +94,3 @@ code {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #E5E3DC; border-radius: 8px; }
 ::-webkit-scrollbar-thumb:hover { background: #C2D5C4; }
-
-@layer base {
-    [data-debug-wrapper="true"] {
-        display: contents !important;
-    }
-    [data-debug-wrapper="true"] > * {
-        margin-left: inherit; margin-right: inherit; margin-top: inherit; margin-bottom: inherit;
-        padding-left: inherit; padding-right: inherit; padding-top: inherit; padding-bottom: inherit;
-        column-gap: inherit; row-gap: inherit; gap: inherit;
-        border-left-width: inherit; border-right-width: inherit; border-top-width: inherit; border-bottom-width: inherit;
-        border-left-style: inherit; border-right-style: inherit; border-top-style: inherit; border-bottom-style: inherit;
-        border-left-color: inherit; border-right-color: inherit; border-top-color: inherit; border-bottom-color: inherit;
-    }
-}

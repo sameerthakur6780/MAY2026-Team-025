@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { ClipboardCheck, Sparkles, FileText, CheckCircle2, XCircle } from "lucide-react";
+import { ClipboardCheck, Sparkles, FileText, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function AdminGrading() {

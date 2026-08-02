@@ -1,14 +1,17 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { GraduationCap, Users, ShieldCheck, ArrowLeft } from "lucide-react";
+import { GraduationCap, Users, ShieldCheck, Presentation, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { setSession, roleHome, ROLE_LABEL } from "@/lib/store";
+import { roleHome, ROLE_LABEL } from "@/lib/store";
+import { useAuth } from "@/context/AuthContext";
+import { ApiError } from "@/lib/apiClient";
 
 const ROLES = [
   { key: "admin", label: "Admin / Tutor", icon: ShieldCheck },
+  { key: "teacher", label: "Teacher", icon: Presentation },
   { key: "parent", label: "Parent", icon: Users },
   { key: "student", label: "Student", icon: GraduationCap },
 ];
@@ -16,35 +19,37 @@ const ROLES = [
 export default function Login() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [role, setRole] = useState(params.get("role") || "admin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     const r = params.get("role");
     if (r) setRole(r);
   }, [params]);
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     if (!email || !password) {
       toast.error("Please enter email and password");
       return;
     }
-    if (password.length < 4) {
-      toast.error("Password too short (min 4 chars for demo)");
-      return;
-    }
-    const name = email.split("@")[0].replace(/\./g, " ");
-    setSession({ role, email, name: name.charAt(0).toUpperCase() + name.slice(1) });
-    toast.success(`Welcome back, ${ROLE_LABEL[role]}`);
-    navigate(roleHome(role));
-  };
 
-  const useDemoAccount = () => {
-    const demo = { admin: "tutor@educore.demo", parent: "parent@educore.demo", student: "student@educore.demo" };
-    setEmail(demo[role]);
-    setPassword("demo1234");
+    setSubmitting(true);
+    try {
+      // The role tabs above are just a visual hint -- where we actually
+      // land is whatever role the account really has, not what's selected.
+      const me = await login(email, password);
+      toast.success(`Welcome back, ${ROLE_LABEL[me.role] || me.full_name}`);
+      navigate(roleHome(me.role));
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : "Something went wrong. Please try again.";
+      toast.error(message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -88,7 +93,7 @@ export default function Login() {
           <p className="text-[#5C5C5C] mt-2">Continue to your EduCore portal</p>
 
           {/* Role tabs */}
-          <div className="mt-8 grid grid-cols-3 gap-2 p-1 bg-[#F0EEE8] rounded-xl">
+          <div className="mt-8 grid grid-cols-4 gap-2 p-1 bg-[#F0EEE8] rounded-xl">
             {ROLES.map((r) => (
               <button
                 key={r.key}
@@ -129,16 +134,13 @@ export default function Login() {
                 className="border-soft focus:border-forest focus:ring-sage"
               />
             </div>
-            <button
-              type="button"
-              data-testid="use-demo-btn"
-              onClick={useDemoAccount}
-              className="text-xs text-terracotta hover:underline font-semibold"
+            <Button
+              type="submit"
+              data-testid="login-submit-btn"
+              disabled={submitting}
+              className="w-full bg-forest hover:bg-[#162D24] text-white py-6 rounded-lg font-semibold disabled:opacity-60"
             >
-              Use demo credentials →
-            </button>
-            <Button type="submit" data-testid="login-submit-btn" className="w-full bg-forest hover:bg-[#162D24] text-white py-6 rounded-lg font-semibold">
-              Sign in as {ROLE_LABEL[role]}
+              {submitting ? "Signing in..." : `Sign in as ${ROLE_LABEL[role]}`}
             </Button>
           </form>
 

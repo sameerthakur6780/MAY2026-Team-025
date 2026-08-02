@@ -3,8 +3,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { PARENT_NAV } from "@/lib/navConfig";
 import { SAFETY_FEED, FEE_RECORDS, STUDENT_PERFORMANCE } from "@/lib/mockData";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, TrendingUp, Wallet, AlertCircle, ArrowRight } from "lucide-react";
+import { CheckCircle2, TrendingUp, Wallet, ArrowRight } from "lucide-react";
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 
 export default function ParentDashboard() {

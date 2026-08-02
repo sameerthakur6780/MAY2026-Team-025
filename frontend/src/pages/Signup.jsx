@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { GraduationCap, Users, ShieldCheck, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { setSession, roleHome, ROLE_LABEL } from "@/lib/store";
+import { ROLE_LABEL } from "@/lib/store";
 
 const ROLES = [
   { key: "admin", label: "Admin / Tutor", icon: ShieldCheck },
@@ -15,19 +15,19 @@ const ROLES = [
 
 export default function Signup() {
   const [params] = useSearchParams();
-  const navigate = useNavigate();
   const [role, setRole] = useState(params.get("role") || "admin");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
+  // There's no public self-signup on the real backend -- accounts are
+  // created by an admin (POST /api/auth/signup requires an admin session).
+  // This form is left in place for the visual, but it can't actually create
+  // an account, so it says so rather than pretending to.
   const handleSignup = (e) => {
     e.preventDefault();
     if (!name || !email || !password) return toast.error("Please fill all fields");
-    if (password.length < 6) return toast.error("Password should be 6+ characters");
-    setSession({ role, email, name });
-    toast.success(`Account created — welcome ${name}!`);
-    navigate(roleHome(role));
+    toast.error("Self-signup isn't available. Ask your center admin to create your account.");
   };
 
   return (
