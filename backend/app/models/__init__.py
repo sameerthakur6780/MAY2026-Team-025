@@ -5,6 +5,8 @@ from app.models.student import Student
 from app.models.academic import SchoolClass, Subject, ClassSubjectTeacher
 from app.models.resource import Resource, ResourceType
 from app.models.attendance import Attendance, AttendanceStatus, AttendanceMethod
+from app.models.homework import Homework, Submission, SubmissionStatus
+from app.models.test import Test, TestSubmission
 
 __all__ = [
     "User",
@@ -20,4 +22,9 @@ __all__ = [
     "Attendance",
     "AttendanceStatus",
     "AttendanceMethod",
+    "Homework",
+    "Submission",
+    "SubmissionStatus",
+    "Test",
+    "TestSubmission",
 ]

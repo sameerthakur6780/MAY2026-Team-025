@@ -42,11 +42,15 @@ def create_app(config_class=Config):
     from app.routes.auth import auth_bp
     from app.routes.classes import classes_bp
     from app.routes.health import health_bp
+    from app.routes.homework import homework_bp
+    from app.routes.homework_submissions import homework_submissions_bp
     from app.routes.parents import parents_bp
     from app.routes.resources import resources_bp
     from app.routes.students import students_bp
     from app.routes.subjects import subjects_bp
     from app.routes.teachers import teachers_bp
+    from app.routes.test_submissions import test_submissions_bp
+    from app.routes.tests import tests_bp
 
     app.register_blueprint(health_bp)
     app.register_blueprint(auth_bp)
@@ -58,6 +62,10 @@ def create_app(config_class=Config):
     app.register_blueprint(assignments_bp)
     app.register_blueprint(resources_bp)
     app.register_blueprint(attendance_bp)
+    app.register_blueprint(homework_bp)
+    app.register_blueprint(homework_submissions_bp)
+    app.register_blueprint(tests_bp)
+    app.register_blueprint(test_submissions_bp)
 
     from app.cli import create_admin
     app.cli.add_command(create_admin)

@@ -7,7 +7,9 @@ from werkzeug.utils import secure_filename
 
 from app.extensions import db
 from app.models.academic import SchoolClass, Subject
+from app.models.homework import Homework
 from app.models.resource import Resource, ResourceType
+from app.models.test import Test
 from app.services.storage import get_storage_service
 from app.utils.errors import ApiError, forbidden, not_found
 from app.utils.scoping import current_parent, current_student, current_teacher, teacher_class_ids
@@ -141,6 +143,15 @@ def delete_resource(resource_id, current_user_id, role):
         raise not_found("Resource")
     if role != "admin" and resource.uploaded_by != current_user_id:
         raise forbidden("Only the uploader or an admin can delete this resource")
+
+    homework_count = Homework.query.filter_by(resource_id=resource_id).count()
+    test_count = Test.query.filter_by(resource_id=resource_id).count()
+    if homework_count or test_count:
+        raise ApiError(
+            f"Cannot delete: referenced by {homework_count} homework and {test_count} test record(s)",
+            "conflict",
+            409,
+        )
 
     get_storage_service().delete(resource.storage_path)
     db.session.delete(resource)
