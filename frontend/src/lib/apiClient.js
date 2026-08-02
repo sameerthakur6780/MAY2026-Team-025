@@ -20,6 +20,19 @@ function getCookie(name) {
   return match ? decodeURIComponent(match[1]) : null;
 }
 
+// marshmallow validation errors come back as {field: [msg, ...]}, not a
+// string -- format them into one readable line so ApiError.message is
+// always safe to show directly in a toast.
+function formatErrorMessage(rawMessage, fallback) {
+  if (typeof rawMessage === "string") return rawMessage;
+  if (rawMessage && typeof rawMessage === "object") {
+    return Object.entries(rawMessage)
+      .map(([field, errors]) => `${field}: ${Array.isArray(errors) ? errors.join(" ") : errors}`)
+      .join(" ");
+  }
+  return fallback;
+}
+
 async function rawRequest(path, { method = "GET", body } = {}) {
   const headers = {};
   let finalBody = body;
@@ -54,7 +67,7 @@ async function rawRequest(path, { method = "GET", body } = {}) {
   }
 
   if (!response.ok) {
-    throw new ApiError((data && data.message) || response.statusText, {
+    throw new ApiError(formatErrorMessage(data && data.message, response.statusText), {
       status: response.status,
       code: data && data.error,
       details: data,
