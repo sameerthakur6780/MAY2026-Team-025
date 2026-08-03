@@ -1,0 +1,1811 @@
+openapi: 3.0.3
+info:
+  title: SmartBatch API — Sprint 1
+  version: "1.0.0"
+  license:
+    name: UNLICENSED
+  description: |
+    REST API for SmartBatch, a tuition-center management platform.
+
+    **Scope**: this document covers Sprint 1 only — authentication, and
+    CRUD/management for students, teachers, parents, classes, teacher
+    assignments, learning resources, and manual attendance.
+
+    **Explicitly excluded** (deferred to Sprint 2+, not documented here even
+    though a couple of these routes already exist in the codebase):
+    facial-recognition attendance (`POST /api/attendance/facial`), student
+    profile-photo upload (`POST /api/students/{id}/profile-image`, which
+    computes a face embedding for the facial-recognition feature), homework,
+    tests, submissions, grading, notifications, analytics, and payments.
+    `GET/POST/PATCH/DELETE /api/subjects` is also omitted: it has no
+    corresponding user story in the Sprint 1 backlog below, even though the
+    routes are implemented and used internally (as `subject_id`) by the
+    Assignments and Resources endpoints documented here.
+
+    ## Authentication
+    All authentication is cookie-based (see `POST /api/auth/login`). There is
+    **no token in any JSON response body** and the frontend never touches
+    `localStorage` for auth — the browser sends the httponly `access_token_cookie`
+    automatically. State-changing requests (`POST`/`PATCH`/`DELETE`) additionally
+    require a `X-CSRF-TOKEN` header, double-submitted from the JS-readable
+    `csrf_access_token` cookie (or `csrf_refresh_token`, only for
+    `POST /api/auth/refresh`), per flask-jwt-extended's `JWT_COOKIE_CSRF_PROTECT`.
+
+    ## Pagination
+    Every list endpoint accepts `page`/`per_page` and returns the same
+    envelope shape: `{items, page, per_page, total, pages}`.
+
+    ## Errors
+    Every error response is `{"error": "<machine_code>", "message": <string or object>}`.
+    Marshmallow validation failures (`error: "validation_error"`) return
+    `message` as an object of `{field: [messages]}`; every other error
+    returns `message` as a plain string.
+
+servers:
+  - url: http://localhost:5000
+    description: Local development
+
+tags:
+  - name: Auth
+    description: Cookie-based login/logout/session/session-refresh and account provisioning.
+  - name: Students
+    description: Student record management, role-scoped by admin/teacher/parent.
+  - name: Teachers
+    description: Teacher account management (admin-only).
+  - name: Parents
+    description: Parent account management (admin-only).
+  - name: Classes
+    description: Class (grade 1-12 batch) management, role-scoped by admin/teacher/parent.
+  - name: Assignments
+    description: Mapping of which teacher teaches which subject to which class (admin-only).
+  - name: Resources
+    description: Study-material upload/listing/download, role-scoped to each user's classes.
+  - name: Attendance
+    description: Manual attendance marking and role-scoped history.
+
+security:
+  - cookieAuth: []
+
+paths:
+  /api/auth/signup:
+    post:
+      tags: [Auth]
+      summary: Create a teacher, parent, or student account
+      operationId: authSignup
+      description: >-
+        Admin-only. Students never self-register; every account in the
+        system is provisioned by an admin through this endpoint (or the
+        equivalent `POST /api/students`, `/api/teachers`, `/api/parents`
+        shortcuts, which force `role` and delegate here).
+      x-user-story: [US-04]
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignupRequest"
+      responses:
+        "201":
+          description: Account created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserPayload"
+        "400":
+          description: >-
+            Validation failure, or a semantic rejection raised after schema
+            validation (`invalid_role`, `missing_fields`, `weak_password` —
+            password under 6 characters, or a missing `admission_no` for a
+            student account).
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/ValidationErrorResponse"
+                  - $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: >-
+            `email_taken` (an account with this email already exists), or
+            `conflict` (a database-level unique-constraint violation, e.g.
+            a duplicate `admission_no`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/auth/login:
+    post:
+      tags: [Auth]
+      summary: Log in with email and password
+      operationId: authLogin
+      description: >-
+        Public. On success, sets the httponly access/refresh token cookies
+        and their JS-readable CSRF-double-submit companions; the response
+        body carries only the user's profile, never a token. Rate-limited
+        to 5 requests/minute per client.
+      x-user-story: [US-01]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Login succeeded; auth cookies are set.
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+              description: >-
+                access_token_cookie, csrf_access_token, refresh_token_cookie,
+                csrf_refresh_token (httponly flags apply to the two token
+                cookies only).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserPayload"
+        "400":
+          description: >-
+            Validation failure (malformed email, empty password), or
+            `missing_credentials`.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/ValidationErrorResponse"
+                  - $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: "`invalid_credentials` — email/password did not match."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+
+  /api/auth/logout:
+    post:
+      tags: [Auth]
+      summary: Log out
+      operationId: authLogout
+      description: >-
+        Clears all auth cookies. Requires no authentication, so it always
+        succeeds even against an already-expired or missing session.
+      x-user-story: [US-02]
+      security: []
+      responses:
+        "200":
+          description: Session cookies cleared.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message]
+                properties:
+                  message: { type: string, example: "Logged out" }
+
+  /api/auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Exchange a refresh token for a new access token
+      operationId: authRefresh
+      description: >-
+        Requires the `refresh_token_cookie` (only sent by the browser on
+        requests to this path, per its cookie `Path` scoping) and its
+        matching `X-CSRF-TOKEN` header sourced from `csrf_refresh_token`.
+        Issues a new short-lived `access_token_cookie`. Used by the
+        frontend API client to transparently retry a request after a
+        `token_expired` 401.
+      x-user-story: [US-03]
+      security:
+        - refreshCookieAuth: []
+          csrfToken: []
+      responses:
+        "200":
+          description: A new access-token cookie has been set.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message]
+                properties:
+                  message: { type: string, example: "Access token refreshed" }
+        "401":
+          description: The refresh cookie is missing, invalid, expired, or its CSRF header didn't match.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/auth/me:
+    get:
+      tags: [Auth]
+      summary: Get the current session's user profile
+      operationId: authMe
+      description: >-
+        The frontend's source of truth for "am I logged in" — checked on
+        load instead of trusting any client-side storage.
+      x-user-story: [US-03]
+      responses:
+        "200":
+          description: The authenticated user's profile.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserPayload"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/students:
+    get:
+      tags: [Students]
+      summary: List students (role-scoped)
+      operationId: listStudents
+      description: >-
+        Admin sees all students; a teacher sees students in their assigned
+        classes; a parent sees only their own children. Students cannot
+        call this endpoint.
+      x-user-story: [US-05, US-10, US-11]
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/PerPageParam"
+        - name: class_id
+          in: query
+          schema: { type: integer }
+        - name: grade
+          in: query
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Paginated list of students visible to the caller.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedStudents"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Students]
+      summary: Create a student account
+      operationId: createStudent
+      description: Admin-only. `role` is forced to `student` server-side.
+      x-user-story: [US-04, US-05]
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StudentCreateRequest"
+      responses:
+        "201":
+          description: Student created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudentResponse"
+        "400":
+          description: Validation failure, `missing_fields`, or `weak_password`.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/ValidationErrorResponse"
+                  - $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: "`email_taken` or `conflict` (e.g. duplicate `admission_no`)."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/students/{studentId}:
+    parameters:
+      - name: studentId
+        in: path
+        required: true
+        schema: { type: integer }
+    get:
+      tags: [Students]
+      summary: Get a single student (role-scoped)
+      operationId: getStudent
+      x-user-story: [US-05, US-10, US-11]
+      responses:
+        "200":
+          description: The student record.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudentResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [Students]
+      summary: Update a student
+      operationId: updateStudent
+      description: >-
+        Admin-only. Partial update. Note `profile_image` is deliberately not
+        editable here — it is only ever set via the (Sprint 2+) facial
+        profile-photo endpoint, to keep the stored photo and its face
+        embedding from drifting out of sync.
+      x-user-story: [US-05]
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StudentUpdateRequest"
+      responses:
+        "200":
+          description: Updated student.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudentResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: "`conflict` — a unique field (e.g. `admission_no`) collided with an existing record."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      tags: [Students]
+      summary: Delete a student
+      operationId: deleteStudent
+      description: >-
+        Admin-only. Deletes the underlying user account, which cascades to
+        the student profile row.
+      x-user-story: [US-05]
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      responses:
+        "204":
+          description: Student deleted.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/teachers:
+    get:
+      tags: [Teachers]
+      summary: List teachers
+      operationId: listTeachers
+      description: Admin-only.
+      x-user-story: [US-06]
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/PerPageParam"
+      responses:
+        "200":
+          description: Paginated list of teachers.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedTeachers"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Teachers]
+      summary: Create a teacher account
+      operationId: createTeacher
+      description: Admin-only. `role` is forced to `teacher` server-side.
+      x-user-story: [US-04, US-06]
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TeacherCreateRequest"
+      responses:
+        "201":
+          description: Teacher created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeacherResponse"
+        "400":
+          description: Validation failure, `missing_fields`, or `weak_password`.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/ValidationErrorResponse"
+                  - $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: "`email_taken` or `conflict`."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/teachers/{teacherId}:
+    parameters:
+      - name: teacherId
+        in: path
+        required: true
+        schema: { type: integer }
+    get:
+      tags: [Teachers]
+      summary: Get a single teacher
+      operationId: getTeacher
+      description: Admin-only.
+      x-user-story: [US-06]
+      responses:
+        "200":
+          description: The teacher record.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeacherResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [Teachers]
+      summary: Update a teacher
+      operationId: updateTeacher
+      description: >-
+        Admin-only. The teachers table currently has no fields of its own
+        that are editable here (name/email live on the linked user account;
+        class/subject assignment is managed via `/api/assignments`). The
+        request body must therefore be empty — any field sent is rejected
+        as an unknown field. Kept as a real endpoint (rather than removed)
+        so a no-op PATCH returns a clear 400 instead of silently doing
+        nothing.
+      x-user-story: [US-06]
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TeacherUpdateRequest"
+      responses:
+        "200":
+          description: No-op; returns the teacher record unchanged.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeacherResponse"
+        "400":
+          description: Any field was sent in the body (unknown-field validation error).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Teachers]
+      summary: Delete a teacher
+      operationId: deleteTeacher
+      description: Admin-only. Deletes the underlying user account, cascading to the teacher profile row.
+      x-user-story: [US-06]
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      responses:
+        "204":
+          description: Teacher deleted.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/parents:
+    get:
+      tags: [Parents]
+      summary: List parents
+      operationId: listParents
+      description: Admin-only.
+      x-user-story: [US-07]
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/PerPageParam"
+      responses:
+        "200":
+          description: Paginated list of parents.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedParents"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Parents]
+      summary: Create a parent account
+      operationId: createParent
+      description: Admin-only. `role` is forced to `parent` server-side.
+      x-user-story: [US-04, US-07]
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ParentCreateRequest"
+      responses:
+        "201":
+          description: Parent created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ParentResponse"
+        "400":
+          description: Validation failure, `missing_fields`, or `weak_password`.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/ValidationErrorResponse"
+                  - $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: "`email_taken` or `conflict`."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/parents/{parentId}:
+    parameters:
+      - name: parentId
+        in: path
+        required: true
+        schema: { type: integer }
+    get:
+      tags: [Parents]
+      summary: Get a single parent
+      operationId: getParent
+      description: Admin-only.
+      x-user-story: [US-07]
+      responses:
+        "200":
+          description: The parent record.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ParentResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [Parents]
+      summary: Update a parent
+      operationId: updateParent
+      description: Admin-only. The only editable fields are `occupation` and `address`.
+      x-user-story: [US-07]
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ParentUpdateRequest"
+      responses:
+        "200":
+          description: Updated parent.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ParentResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Parents]
+      summary: Delete a parent
+      operationId: deleteParent
+      description: >-
+        Admin-only. Deletes the underlying user account, cascading to the
+        parent profile row. Refused if the parent still has students linked.
+      x-user-story: [US-07]
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      responses:
+        "204":
+          description: Parent deleted.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: "`conflict` — one or more students are still linked to this parent."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/classes:
+    get:
+      tags: [Classes]
+      summary: List classes (role-scoped)
+      operationId: listClasses
+      description: >-
+        Admin sees all classes; a teacher sees only classes they're assigned
+        to; a parent sees only their children's classes.
+      x-user-story: [US-08, US-10, US-11]
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/PerPageParam"
+      responses:
+        "200":
+          description: Paginated list of classes visible to the caller.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedClasses"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Classes]
+      summary: Create a class
+      operationId: createClass
+      description: >-
+        Admin-only. The tuition center runs exactly one batch per grade, so
+        `grade` is unique.
+      x-user-story: [US-08]
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClassRequest"
+      responses:
+        "201":
+          description: Class created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClassResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: "`conflict` — a class for this grade already exists."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/classes/{classId}:
+    parameters:
+      - name: classId
+        in: path
+        required: true
+        schema: { type: integer }
+    get:
+      tags: [Classes]
+      summary: Get a single class (role-scoped)
+      operationId: getClass
+      x-user-story: [US-08, US-10, US-11]
+      responses:
+        "200":
+          description: The class record.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClassResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [Classes]
+      summary: Update a class
+      operationId: updateClass
+      description: Admin-only.
+      x-user-story: [US-08]
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClassRequest"
+      responses:
+        "200":
+          description: Updated class.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClassResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: "`conflict` — a class for this grade already exists."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      tags: [Classes]
+      summary: Delete a class
+      operationId: deleteClass
+      description: >-
+        Admin-only. Implemented in the backend, though the current admin UI
+        does not surface a delete button for classes. Refused while any
+        student is still assigned to the class.
+      x-user-story: [US-08]
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      responses:
+        "204":
+          description: Class deleted.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: "`conflict` — one or more students are still assigned to this class."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/assignments:
+    get:
+      tags: [Assignments]
+      summary: List class/subject → teacher assignments
+      operationId: listAssignments
+      description: Admin-only.
+      x-user-story: [US-09]
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/PerPageParam"
+        - name: class_id
+          in: query
+          schema: { type: integer }
+        - name: teacher_id
+          in: query
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Paginated list of assignments.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedAssignments"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Assignments]
+      summary: Assign a teacher to a class/subject
+      operationId: createAssignment
+      description: >-
+        Admin-only. There is no update endpoint by design — changing an
+        assignment is delete-then-recreate. A given class/subject pair may
+        only be assigned to one teacher at a time.
+      x-user-story: [US-09]
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssignmentRequest"
+      responses:
+        "201":
+          description: Assignment created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssignmentResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: "`not_found` — the referenced class, subject, or teacher does not exist."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: "`conflict` — this class/subject combination is already assigned to a teacher."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/assignments/{assignmentId}:
+    parameters:
+      - name: assignmentId
+        in: path
+        required: true
+        schema: { type: integer }
+    delete:
+      tags: [Assignments]
+      summary: Remove an assignment
+      operationId: deleteAssignment
+      description: Admin-only.
+      x-user-story: [US-09]
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      responses:
+        "204":
+          description: Assignment removed.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/resources:
+    get:
+      tags: [Resources]
+      summary: List resources (role-scoped)
+      operationId: listResources
+      description: >-
+        Admin sees all resources; a teacher sees resources for their
+        assigned classes; a parent sees resources for their children's
+        classes; a student sees resources for their own class.
+      x-user-story: [US-13]
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/PerPageParam"
+        - name: class_id
+          in: query
+          schema: { type: integer }
+        - name: subject_id
+          in: query
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Paginated list of resources visible to the caller.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedResources"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Resources]
+      summary: Upload a resource
+      operationId: uploadResource
+      description: >-
+        Admin or teacher. Multipart upload; the file is streamed to Supabase
+        Storage under `<type>/<class_id>/<uuid>_<filename>`. Allowed
+        extensions: pdf, jpg, jpeg, png, doc, docx, txt. Max size 20MB
+        (Werkzeug additionally hard-rejects any request body over 21MB
+        before this validation even runs — see the 413 response).
+      x-user-story: [US-12]
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/ResourceUploadRequest"
+      responses:
+        "201":
+          description: Resource uploaded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResourceResponse"
+        "400":
+          description: >-
+            Validation failure, or `missing_file` / `invalid_file_type` /
+            `empty_file` / `file_too_large`.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/ValidationErrorResponse"
+                  - $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: "`not_found` — the referenced class or subject does not exist."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "502":
+          $ref: "#/components/responses/StorageError"
+
+  /api/resources/{resourceId}:
+    parameters:
+      - name: resourceId
+        in: path
+        required: true
+        schema: { type: integer }
+    get:
+      tags: [Resources]
+      summary: Get a single resource (role-scoped)
+      operationId: getResource
+      x-user-story: [US-13]
+      responses:
+        "200":
+          description: The resource record.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResourceResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Resources]
+      summary: Delete a resource
+      operationId: deleteResource
+      description: >-
+        Admin, or the teacher who originally uploaded it. Refused if the
+        resource is referenced by a homework or test record (Sprint 2+
+        features — the guard exists in the schema already).
+      x-user-story: [US-12]
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      responses:
+        "204":
+          description: Resource deleted.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: "`forbidden` — only the uploader or an admin can delete this resource."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: "`conflict` — the resource is referenced by homework and/or test records."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/resources/{resourceId}/download:
+    parameters:
+      - name: resourceId
+        in: path
+        required: true
+        schema: { type: integer }
+    get:
+      tags: [Resources]
+      summary: Get a time-limited download URL for a resource
+      operationId: downloadResource
+      description: >-
+        Role-scoped the same as `GET /api/resources/{resourceId}`. Returns a
+        signed Supabase Storage URL rather than the file bytes.
+      x-user-story: [US-13]
+      responses:
+        "200":
+          description: Signed download URL.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResourceDownloadResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "502":
+          $ref: "#/components/responses/StorageError"
+
+  /api/attendance:
+    get:
+      tags: [Attendance]
+      summary: List attendance records (role-scoped)
+      operationId: listAttendance
+      description: >-
+        Admin sees all records; a teacher sees records for their assigned
+        classes; a parent/student see only their own child's/their own
+        records — filtered by identity, not by class, so a parent or
+        student can never see a classmate's record even by guessing a
+        `class_id`.
+      x-user-story: [US-16]
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/PerPageParam"
+        - name: student_id
+          in: query
+          schema: { type: integer }
+        - name: class_id
+          in: query
+          schema: { type: integer }
+        - name: date_from
+          in: query
+          description: ISO date (YYYY-MM-DD), inclusive lower bound.
+          schema: { type: string, format: date }
+        - name: date_to
+          in: query
+          description: ISO date (YYYY-MM-DD), inclusive upper bound.
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: Paginated list of attendance records visible to the caller.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedAttendance"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /api/attendance/bulk:
+    post:
+      tags: [Attendance]
+      summary: Mark attendance for a whole class at once
+      operationId: bulkMarkAttendance
+      description: >-
+        Admin or teacher. Any `entries[].student_id` already marked for this
+        `class_id` + `date` is silently **skipped**, not rejected — this
+        lets manual marking safely coexist with the (Sprint 2+)
+        facial-recognition auto-marking pass for the same class/date without
+        one overwriting the other. Skipped ids are returned so the caller
+        can show which students were left untouched.
+      x-user-story: [US-14]
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AttendanceBulkRequest"
+      responses:
+        "201":
+          description: Attendance recorded for all entries that weren't already marked.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttendanceBulkResponse"
+        "400":
+          description: >-
+            Validation failure (including a duplicate `student_id` within
+            `entries`), or `invalid_student_class` (a student is not
+            enrolled in the given class).
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/ValidationErrorResponse"
+                  - $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: "`not_found` — the class does not exist, or one or more `student_id`s don't exist."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: "`conflict` — a rare race where a record was inserted concurrently between the pre-check and the commit."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/attendance/{attendanceId}:
+    parameters:
+      - name: attendanceId
+        in: path
+        required: true
+        schema: { type: integer }
+    patch:
+      tags: [Attendance]
+      summary: Correct a single attendance record
+      operationId: updateAttendance
+      description: Admin or teacher. Partial update of `status` and/or `method`.
+      x-user-story: [US-15]
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AttendanceUpdateRequest"
+      responses:
+        "200":
+          description: Updated attendance record.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttendanceResponse"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: access_token_cookie
+      description: >-
+        Httponly JWT access-token cookie, set by POST /api/auth/login and
+        refreshed by POST /api/auth/refresh. Required for every endpoint
+        except login, logout, and refresh itself.
+    refreshCookieAuth:
+      type: apiKey
+      in: cookie
+      name: refresh_token_cookie
+      description: >-
+        Httponly JWT refresh-token cookie. The browser only attaches it to
+        requests under the /api/auth/refresh path (its cookie Path is
+        scoped there).
+    csrfToken:
+      type: apiKey
+      in: header
+      name: X-CSRF-TOKEN
+      description: >-
+        Double-submit CSRF token, required on every POST/PATCH/DELETE.
+        Its value is read from the JS-readable csrf_access_token cookie
+        (or csrf_refresh_token, only when calling POST /api/auth/refresh)
+        and echoed back verbatim in this header.
+
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      description: 1-indexed page number.
+      schema: { type: integer, minimum: 1, default: 1 }
+    PerPageParam:
+      name: per_page
+      in: query
+      description: Items per page (capped server-side at 100).
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+
+  responses:
+    ValidationError:
+      description: The request body or query parameters failed schema validation.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ValidationErrorResponse"
+    Unauthorized:
+      description: >-
+        Missing, invalid, or expired credentials. `error` is one of
+        `authentication_required` (no access-token cookie present),
+        `invalid_token` (malformed/tampered token, or a mismatched
+        X-CSRF-TOKEN header), `token_expired`, or `user_not_found` (the
+        token's subject no longer exists).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Forbidden:
+      description: "Authenticated, but the caller's role lacks permission for this action (`error: \"forbidden\"`)."
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotFound:
+      description: "The requested resource does not exist (`error: \"not_found\"`)."
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    RateLimited:
+      description: "Too many requests — more than 5 login attempts in one minute from this client."
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    PayloadTooLarge:
+      description: >-
+        The request body exceeds the server's hard content-length ceiling
+        (21MB), enforced by Werkzeug before the upload is even parsed —
+        1MB above the application-level 20MB file-size limit, to leave
+        headroom for multipart overhead.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    StorageError:
+      description: >-
+        The upstream storage provider failed (`error: "storage_error"`) or
+        didn't respond in time (`error: "storage_timeout"`).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+  schemas:
+    ErrorResponse:
+      type: object
+      required: [error, message]
+      properties:
+        error:
+          type: string
+          description: Machine-readable error code.
+        message:
+          type: string
+
+    ValidationErrorResponse:
+      type: object
+      required: [error, message]
+      properties:
+        error:
+          type: string
+          enum: [validation_error]
+        message:
+          type: object
+          description: Marshmallow field-name to list-of-messages map.
+          additionalProperties:
+            type: array
+            items:
+              type: string
+
+    RoleEnum:
+      type: string
+      enum: [admin, teacher, parent, student]
+
+    UserPayload:
+      type: object
+      required: [id, full_name, email, role, phone]
+      properties:
+        id: { type: integer }
+        full_name: { type: string }
+        email: { type: string, format: email }
+        role: { $ref: "#/components/schemas/RoleEnum" }
+        phone: { type: string, nullable: true }
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, minLength: 1 }
+
+    SignupRequest:
+      type: object
+      required: [role, full_name, email, password]
+      description: >-
+        `admission_no` becomes required when `role` is `student`
+        (enforced by a cross-field validator, not expressible as a plain
+        JSON Schema `required`).
+      properties:
+        role:
+          type: string
+          enum: [teacher, parent, student]
+          description: Admin accounts cannot be created through this endpoint.
+        full_name: { type: string, minLength: 1, maxLength: 120 }
+        email: { type: string, format: email }
+        password: { type: string, minLength: 6 }
+        phone: { type: string, maxLength: 20, nullable: true }
+        admission_no:
+          type: string
+          maxLength: 30
+          nullable: true
+          description: Required if role is student.
+        dob: { type: string, format: date, nullable: true }
+        gender: { type: string, maxLength: 20, nullable: true }
+        class_id: { type: integer, nullable: true }
+        parent_id: { type: integer, nullable: true }
+        occupation: { type: string, maxLength: 120, nullable: true }
+        address: { type: string, maxLength: 255, nullable: true }
+
+    StudentCreateRequest:
+      type: object
+      required: [full_name, email, password, admission_no]
+      description: Same underlying schema as SignupRequest; `role` is forced to `student` server-side and need not be sent.
+      properties:
+        full_name: { type: string, minLength: 1, maxLength: 120 }
+        email: { type: string, format: email }
+        password: { type: string, minLength: 6 }
+        phone: { type: string, maxLength: 20, nullable: true }
+        admission_no: { type: string, maxLength: 30 }
+        dob: { type: string, format: date, nullable: true }
+        gender: { type: string, maxLength: 20, nullable: true }
+        class_id: { type: integer, nullable: true }
+        parent_id: { type: integer, nullable: true }
+
+    TeacherCreateRequest:
+      type: object
+      required: [full_name, email, password]
+      description: Same underlying schema as SignupRequest; `role` is forced to `teacher` server-side and need not be sent.
+      properties:
+        full_name: { type: string, minLength: 1, maxLength: 120 }
+        email: { type: string, format: email }
+        password: { type: string, minLength: 6 }
+        phone: { type: string, maxLength: 20, nullable: true }
+
+    ParentCreateRequest:
+      type: object
+      required: [full_name, email, password]
+      description: Same underlying schema as SignupRequest; `role` is forced to `parent` server-side and need not be sent.
+      properties:
+        full_name: { type: string, minLength: 1, maxLength: 120 }
+        email: { type: string, format: email }
+        password: { type: string, minLength: 6 }
+        phone: { type: string, maxLength: 20, nullable: true }
+        occupation: { type: string, maxLength: 120, nullable: true }
+        address: { type: string, maxLength: 255, nullable: true }
+
+    StudentUpdateRequest:
+      type: object
+      description: All fields optional (partial update).
+      properties:
+        admission_no: { type: string, maxLength: 30 }
+        dob: { type: string, format: date, nullable: true }
+        gender: { type: string, maxLength: 20, nullable: true }
+        class_id: { type: integer, nullable: true }
+        parent_id: { type: integer, nullable: true }
+        status: { type: string, enum: [active, inactive, withdrawn] }
+
+    StudentResponse:
+      type: object
+      required:
+        - id
+        - user_id
+        - full_name
+        - email
+        - phone
+        - admission_no
+        - dob
+        - gender
+        - class_id
+        - grade
+        - parent_id
+        - profile_image
+        - has_face_embedding
+        - status
+      properties:
+        id: { type: integer }
+        user_id: { type: integer }
+        full_name: { type: string }
+        email: { type: string, format: email }
+        phone: { type: string, nullable: true }
+        admission_no: { type: string }
+        dob: { type: string, format: date, nullable: true }
+        gender: { type: string, nullable: true }
+        class_id: { type: integer, nullable: true }
+        grade: { type: integer, nullable: true }
+        parent_id: { type: integer, nullable: true }
+        profile_image:
+          type: string
+          nullable: true
+          description: Storage path of the student's profile photo (Sprint 2+ facial-recognition feature); null until uploaded.
+        has_face_embedding: { type: boolean }
+        status: { type: string, enum: [active, inactive, withdrawn] }
+
+    TeacherUpdateRequest:
+      type: object
+      description: Must be empty — the teachers table has no fields editable through this endpoint.
+      properties: {}
+      additionalProperties: false
+
+    TeacherResponse:
+      type: object
+      required: [id, user_id, full_name, email, phone, assigned_class_ids]
+      properties:
+        id: { type: integer }
+        user_id: { type: integer }
+        full_name: { type: string }
+        email: { type: string, format: email }
+        phone: { type: string, nullable: true }
+        assigned_class_ids:
+          type: array
+          items: { type: integer }
+
+    ParentUpdateRequest:
+      type: object
+      properties:
+        occupation: { type: string, maxLength: 120, nullable: true }
+        address: { type: string, maxLength: 255, nullable: true }
+
+    ParentResponse:
+      type: object
+      required: [id, user_id, full_name, email, phone, occupation, address, student_ids]
+      properties:
+        id: { type: integer }
+        user_id: { type: integer }
+        full_name: { type: string }
+        email: { type: string, format: email }
+        phone: { type: string, nullable: true }
+        occupation: { type: string, nullable: true }
+        address: { type: string, nullable: true }
+        student_ids:
+          type: array
+          items: { type: integer }
+
+    ClassRequest:
+      type: object
+      required: [grade]
+      properties:
+        grade: { type: integer, minimum: 1, maximum: 12 }
+
+    ClassResponse:
+      type: object
+      required: [id, grade, student_count]
+      properties:
+        id: { type: integer }
+        grade: { type: integer, minimum: 1, maximum: 12 }
+        student_count: { type: integer }
+
+    AssignmentRequest:
+      type: object
+      required: [class_id, subject_id, teacher_id]
+      properties:
+        class_id: { type: integer, minimum: 1 }
+        subject_id: { type: integer, minimum: 1 }
+        teacher_id: { type: integer, minimum: 1 }
+
+    AssignmentResponse:
+      type: object
+      required: [id, class_id, grade, subject_id, subject_name, teacher_id, teacher_name]
+      properties:
+        id: { type: integer }
+        class_id: { type: integer }
+        grade: { type: integer }
+        subject_id: { type: integer }
+        subject_name: { type: string }
+        teacher_id: { type: integer }
+        teacher_name: { type: string }
+
+    ResourceType:
+      type: string
+      enum: [note, pdf, image, question_paper, answer_key]
+
+    ResourceUploadRequest:
+      type: object
+      required: [type, subject_id, class_id, file]
+      properties:
+        type: { $ref: "#/components/schemas/ResourceType" }
+        subject_id: { type: integer, minimum: 1 }
+        class_id: { type: integer, minimum: 1 }
+        file:
+          type: string
+          format: binary
+          description: "Allowed extensions: pdf, jpg, jpeg, png, doc, docx, txt. Max 20MB."
+
+    ResourceResponse:
+      type: object
+      required:
+        - id
+        - type
+        - subject_id
+        - subject_name
+        - class_id
+        - grade
+        - uploaded_by
+        - uploader_name
+        - filename
+        - size
+        - created_at
+      properties:
+        id: { type: integer }
+        type: { $ref: "#/components/schemas/ResourceType" }
+        subject_id: { type: integer }
+        subject_name: { type: string }
+        class_id: { type: integer }
+        grade: { type: integer }
+        uploaded_by: { type: integer, description: User id of the uploader. }
+        uploader_name: { type: string }
+        filename: { type: string }
+        size: { type: integer, description: Size in bytes. }
+        created_at: { type: string, format: date-time }
+
+    ResourceDownloadResponse:
+      type: object
+      required: [url, expires_in, filename]
+      properties:
+        url: { type: string, format: uri, description: Time-limited signed Supabase Storage URL. }
+        expires_in: { type: integer, description: Seconds until the URL expires. }
+        filename: { type: string }
+
+    AttendanceStatus:
+      type: string
+      enum: [present, absent, late]
+
+    AttendanceMethod:
+      type: string
+      enum: [manual, facial]
+      description: >-
+        `facial` is only ever set by the Sprint 2+ facial-recognition
+        endpoint (not documented here); manual marking through this
+        endpoint always uses `manual`.
+
+    AttendanceEntry:
+      type: object
+      required: [student_id, status]
+      properties:
+        student_id: { type: integer, minimum: 1 }
+        status: { $ref: "#/components/schemas/AttendanceStatus" }
+
+    AttendanceBulkRequest:
+      type: object
+      required: [class_id, date, entries]
+      description: entries must not repeat the same student_id more than once.
+      properties:
+        class_id: { type: integer, minimum: 1 }
+        date: { type: string, format: date }
+        method:
+          allOf:
+            - $ref: "#/components/schemas/AttendanceMethod"
+          default: manual
+        entries:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/AttendanceEntry"
+
+    AttendanceUpdateRequest:
+      type: object
+      description: All fields optional (partial update).
+      properties:
+        status: { $ref: "#/components/schemas/AttendanceStatus" }
+        method: { $ref: "#/components/schemas/AttendanceMethod" }
+
+    AttendanceResponse:
+      type: object
+      required:
+        - id
+        - student_id
+        - student_name
+        - class_id
+        - grade
+        - date
+        - status
+        - method
+        - marked_by
+        - marked_by_name
+        - created_at
+        - updated_at
+      properties:
+        id: { type: integer }
+        student_id: { type: integer }
+        student_name: { type: string }
+        class_id: { type: integer }
+        grade: { type: integer }
+        date: { type: string, format: date }
+        status: { $ref: "#/components/schemas/AttendanceStatus" }
+        method: { $ref: "#/components/schemas/AttendanceMethod" }
+        marked_by: { type: integer, description: User id of whoever marked this record. }
+        marked_by_name: { type: string }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    AttendanceBulkResponse:
+      type: object
+      required: [created, skipped_student_ids]
+      properties:
+        created:
+          type: array
+          items:
+            $ref: "#/components/schemas/AttendanceResponse"
+        skipped_student_ids:
+          type: array
+          items: { type: integer }
+          description: student_ids already marked for this class/date; left untouched.
+
+    PaginatedStudents:
+      $ref: "#/components/schemas/_PaginationEnvelope_Student"
+    PaginatedTeachers:
+      $ref: "#/components/schemas/_PaginationEnvelope_Teacher"
+    PaginatedParents:
+      $ref: "#/components/schemas/_PaginationEnvelope_Parent"
+    PaginatedClasses:
+      $ref: "#/components/schemas/_PaginationEnvelope_Class"
+    PaginatedAssignments:
+      $ref: "#/components/schemas/_PaginationEnvelope_Assignment"
+    PaginatedResources:
+      $ref: "#/components/schemas/_PaginationEnvelope_Resource"
+    PaginatedAttendance:
+      $ref: "#/components/schemas/_PaginationEnvelope_Attendance"
+
+    _PaginationEnvelope_Student:
+      type: object
+      required: [items, page, per_page, total, pages]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/StudentResponse" }
+        page: { type: integer }
+        per_page: { type: integer }
+        total: { type: integer }
+        pages: { type: integer }
+
+    _PaginationEnvelope_Teacher:
+      type: object
+      required: [items, page, per_page, total, pages]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/TeacherResponse" }
+        page: { type: integer }
+        per_page: { type: integer }
+        total: { type: integer }
+        pages: { type: integer }
+
+    _PaginationEnvelope_Parent:
+      type: object
+      required: [items, page, per_page, total, pages]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/ParentResponse" }
+        page: { type: integer }
+        per_page: { type: integer }
+        total: { type: integer }
+        pages: { type: integer }
+
+    _PaginationEnvelope_Class:
+      type: object
+      required: [items, page, per_page, total, pages]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/ClassResponse" }
+        page: { type: integer }
+        per_page: { type: integer }
+        total: { type: integer }
+        pages: { type: integer }
+
+    _PaginationEnvelope_Assignment:
+      type: object
+      required: [items, page, per_page, total, pages]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/AssignmentResponse" }
+        page: { type: integer }
+        per_page: { type: integer }
+        total: { type: integer }
+        pages: { type: integer }
+
+    _PaginationEnvelope_Resource:
+      type: object
+      required: [items, page, per_page, total, pages]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/ResourceResponse" }
+        page: { type: integer }
+        per_page: { type: integer }
+        total: { type: integer }
+        pages: { type: integer }
+
+    _PaginationEnvelope_Attendance:
+      type: object
+      required: [items, page, per_page, total, pages]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/AttendanceResponse" }
+        page: { type: integer }
+        per_page: { type: integer }
+        total: { type: integer }
+        pages: { type: integer }
