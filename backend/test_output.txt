@@ -1,0 +1,303 @@
+============================= test session starts =============================
+platform win32 -- Python 3.12.4, pytest-9.1.1, pluggy-1.6.0 -- C:\Users\91949\Documents\MAY2026-Team-025\backend\venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\91949\Documents\MAY2026-Team-025\backend
+configfile: pytest.ini
+plugins: anyio-4.14.2
+collecting ... collected 164 items
+
+tests/test_assignments.py::test_list_assignments_requires_admin PASSED   [  0%]
+tests/test_assignments.py::test_list_assignments_requires_authentication PASSED [  1%]
+tests/test_assignments.py::test_list_assignments_success PASSED          [  1%]
+tests/test_assignments.py::test_list_assignments_filter_by_class_id PASSED [  2%]
+tests/test_assignments.py::test_list_assignments_filter_by_teacher_id PASSED [  3%]
+tests/test_assignments.py::test_create_assignment_requires_admin PASSED  [  3%]
+tests/test_assignments.py::test_create_assignment_success PASSED         [  4%]
+tests/test_assignments.py::test_create_assignment_missing_fields_validation_error PASSED [  4%]
+tests/test_assignments.py::test_create_assignment_nonexistent_class_not_found PASSED [  5%]
+tests/test_assignments.py::test_create_assignment_nonexistent_subject_not_found PASSED [  6%]
+tests/test_assignments.py::test_create_assignment_nonexistent_teacher_not_found PASSED [  6%]
+tests/test_assignments.py::test_create_assignment_duplicate_class_subject_conflict PASSED [  7%]
+tests/test_assignments.py::test_delete_assignment_requires_admin PASSED  [  7%]
+tests/test_assignments.py::test_delete_assignment_success PASSED         [  8%]
+tests/test_assignments.py::test_delete_assignment_not_found PASSED       [  9%]
+tests/test_attendance.py::test_bulk_mark_requires_authentication PASSED  [  9%]
+tests/test_attendance.py::test_bulk_mark_forbidden_for_parent_and_student PASSED [ 10%]
+tests/test_attendance.py::test_bulk_mark_success_by_admin PASSED         [ 10%]
+tests/test_attendance.py::test_bulk_mark_success_by_teacher PASSED       [ 11%]
+tests/test_attendance.py::test_bulk_mark_skips_already_marked_students_instead_of_rejecting PASSED [ 12%]
+tests/test_attendance.py::test_bulk_mark_duplicate_student_id_in_entries_is_validation_error PASSED [ 12%]
+tests/test_attendance.py::test_bulk_mark_empty_entries_is_validation_error PASSED [ 13%]
+tests/test_attendance.py::test_bulk_mark_invalid_status_is_validation_error PASSED [ 14%]
+tests/test_attendance.py::test_bulk_mark_nonexistent_class_not_found PASSED [ 14%]
+tests/test_attendance.py::test_bulk_mark_unknown_student_id_not_found PASSED [ 15%]
+tests/test_attendance.py::test_bulk_mark_student_not_enrolled_in_class_is_bad_request PASSED [ 15%]
+tests/test_attendance.py::test_list_attendance_requires_authentication PASSED [ 16%]
+tests/test_attendance.py::test_admin_sees_all_attendance PASSED          [ 17%]
+tests/test_attendance.py::test_teacher_sees_only_assigned_class_attendance PASSED [ 17%]
+tests/test_attendance.py::test_parent_sees_only_their_childs_attendance_by_identity_not_class PASSED [ 18%]
+tests/test_attendance.py::test_student_sees_only_their_own_attendance PASSED [ 18%]
+tests/test_attendance.py::test_list_attendance_bad_date_is_validation_error PASSED [ 19%]
+tests/test_attendance.py::test_list_attendance_filters_by_date_range PASSED [ 20%]
+tests/test_attendance.py::test_update_attendance_requires_admin_or_teacher PASSED [ 20%]
+tests/test_attendance.py::test_update_attendance_success PASSED          [ 21%]
+tests/test_attendance.py::test_update_attendance_invalid_status_validation_error PASSED [ 21%]
+tests/test_attendance.py::test_update_attendance_not_found PASSED        [ 22%]
+tests/test_auth.py::test_login_success_sets_cookies_and_returns_profile PASSED [ 23%]
+tests/test_auth.py::test_login_wrong_password_401 PASSED                 [ 23%]
+tests/test_auth.py::test_login_unknown_email_401 PASSED                  [ 24%]
+tests/test_auth.py::test_login_malformed_email_validation_error PASSED   [ 25%]
+tests/test_auth.py::test_login_missing_password_validation_error PASSED  [ 25%]
+tests/test_auth.py::test_login_rate_limited_after_five_attempts_per_minute PASSED [ 26%]
+tests/test_auth.py::test_logout_clears_session_so_me_then_401s PASSED    [ 26%]
+tests/test_auth.py::test_logout_without_a_session_still_succeeds PASSED  [ 27%]
+tests/test_auth.py::test_me_requires_authentication PASSED               [ 28%]
+tests/test_auth.py::test_me_returns_current_users_profile PASSED         [ 28%]
+tests/test_auth.py::test_refresh_without_any_session_401 PASSED          [ 29%]
+tests/test_auth.py::test_refresh_issues_a_new_access_cookie PASSED       [ 29%]
+tests/test_auth.py::test_refresh_rejects_access_token_csrf_value PASSED  [ 30%]
+tests/test_auth.py::test_signup_requires_authentication PASSED           [ 31%]
+tests/test_auth.py::test_signup_forbidden_for_non_admin_roles PASSED     [ 31%]
+tests/test_auth.py::test_signup_creates_teacher_account PASSED           [ 32%]
+tests/test_auth.py::test_signup_creates_parent_account PASSED            [ 32%]
+tests/test_auth.py::test_signup_creates_student_account_with_admission_no PASSED [ 33%]
+tests/test_auth.py::test_signup_student_without_admission_no_is_validation_error PASSED [ 34%]
+tests/test_auth.py::test_signup_rejects_admin_role PASSED                [ 34%]
+tests/test_auth.py::test_signup_short_password_is_validation_error PASSED [ 35%]
+tests/test_auth.py::test_signup_missing_required_fields_is_validation_error PASSED [ 35%]
+tests/test_auth.py::test_signup_duplicate_email_is_conflict PASSED       [ 36%]
+tests/test_classes.py::test_list_classes_requires_authentication PASSED  [ 37%]
+tests/test_classes.py::test_admin_sees_all_classes PASSED                [ 37%]
+tests/test_classes.py::test_teacher_sees_only_assigned_classes PASSED    [ 38%]
+tests/test_classes.py::test_parent_sees_only_childrens_classes PASSED    [ 39%]
+tests/test_classes.py::test_get_class_not_found PASSED                   [ 39%]
+tests/test_classes.py::test_get_class_forbidden_for_unrelated_teacher PASSED [ 40%]
+tests/test_classes.py::test_get_class_includes_student_count PASSED      [ 40%]
+tests/test_classes.py::test_create_class_requires_admin PASSED           [ 41%]
+tests/test_classes.py::test_create_class_success PASSED                  [ 42%]
+tests/test_classes.py::test_create_class_grade_out_of_range_validation_error PASSED [ 42%]
+tests/test_classes.py::test_create_class_missing_grade_validation_error PASSED [ 43%]
+tests/test_classes.py::test_create_class_duplicate_grade_conflict PASSED [ 43%]
+tests/test_classes.py::test_update_class_requires_admin PASSED           [ 44%]
+tests/test_classes.py::test_update_class_success PASSED                  [ 45%]
+tests/test_classes.py::test_update_class_duplicate_grade_conflict PASSED [ 45%]
+tests/test_classes.py::test_update_class_not_found PASSED                [ 46%]
+tests/test_classes.py::test_delete_class_requires_admin PASSED           [ 46%]
+tests/test_classes.py::test_delete_class_success PASSED                  [ 47%]
+tests/test_classes.py::test_delete_class_not_found PASSED                [ 48%]
+tests/test_classes.py::test_delete_class_with_students_is_conflict PASSED [ 48%]
+tests/test_parents.py::test_list_parents_requires_admin PASSED           [ 49%]
+tests/test_parents.py::test_list_parents_requires_authentication PASSED  [ 50%]
+tests/test_parents.py::test_list_parents_success PASSED                  [ 50%]
+tests/test_parents.py::test_get_parent_not_found PASSED                  [ 51%]
+tests/test_parents.py::test_get_parent_success_includes_student_ids PASSED [ 51%]
+tests/test_parents.py::test_create_parent_requires_admin PASSED          [ 52%]
+tests/test_parents.py::test_create_parent_success PASSED                 [ 53%]
+tests/test_parents.py::test_create_parent_missing_fields_validation_error PASSED [ 53%]
+tests/test_parents.py::test_create_parent_duplicate_email_conflict PASSED [ 54%]
+tests/test_parents.py::test_update_parent_requires_admin PASSED          [ 54%]
+tests/test_parents.py::test_update_parent_success PASSED                 [ 55%]
+tests/test_parents.py::test_update_parent_not_found PASSED               [ 56%]
+tests/test_parents.py::test_delete_parent_requires_admin PASSED          [ 56%]
+tests/test_parents.py::test_delete_parent_not_found PASSED               [ 57%]
+tests/test_parents.py::test_delete_parent_with_linked_student_is_conflict PASSED [ 57%]
+tests/test_parents.py::test_delete_parent_cascades_to_user_row PASSED    [ 58%]
+tests/test_resources.py::test_upload_requires_authentication PASSED      [ 59%]
+tests/test_resources.py::test_upload_forbidden_for_parent_and_student PASSED [ 59%]
+tests/test_resources.py::test_upload_success_by_admin PASSED             [ 60%]
+tests/test_resources.py::test_upload_success_by_teacher PASSED           [ 60%]
+tests/test_resources.py::test_upload_missing_file_is_error PASSED        [ 61%]
+tests/test_resources.py::test_upload_invalid_file_type_rejected PASSED   [ 62%]
+tests/test_resources.py::test_upload_empty_file_rejected PASSED          [ 62%]
+tests/test_resources.py::test_upload_missing_form_fields_validation_error PASSED [ 63%]
+tests/test_resources.py::test_upload_invalid_type_enum_validation_error PASSED [ 64%]
+tests/test_resources.py::test_upload_nonexistent_class_not_found PASSED  [ 64%]
+tests/test_resources.py::test_upload_nonexistent_subject_not_found PASSED [ 65%]
+tests/test_resources.py::test_list_resources_requires_authentication PASSED [ 65%]
+tests/test_resources.py::test_admin_sees_all_resources PASSED            [ 66%]
+tests/test_resources.py::test_student_sees_only_own_class_resources PASSED [ 67%]
+tests/test_resources.py::test_parent_sees_only_childs_class_resources PASSED [ 67%]
+tests/test_resources.py::test_teacher_sees_only_assigned_class_resources PASSED [ 68%]
+tests/test_resources.py::test_get_resource_not_found PASSED              [ 68%]
+tests/test_resources.py::test_get_resource_forbidden_for_unrelated_student PASSED [ 69%]
+tests/test_resources.py::test_download_returns_signed_url PASSED         [ 70%]
+tests/test_resources.py::test_download_not_found PASSED                  [ 70%]
+tests/test_resources.py::test_download_forbidden_for_unrelated_teacher PASSED [ 71%]
+tests/test_resources.py::test_delete_resource_forbidden_for_parent_and_student PASSED [ 71%]
+tests/test_resources.py::test_delete_resource_by_admin_success PASSED    [ 72%]
+tests/test_resources.py::test_delete_resource_by_uploading_teacher_success PASSED [ 73%]
+tests/test_resources.py::test_delete_resource_by_non_uploading_teacher_forbidden PASSED [ 73%]
+tests/test_resources.py::test_delete_resource_not_found PASSED           [ 74%]
+tests/test_resources.py::test_delete_resource_referenced_by_homework_is_conflict PASSED [ 75%]
+tests/test_students.py::test_list_students_requires_authentication PASSED [ 75%]
+tests/test_students.py::test_list_students_forbidden_for_student_role PASSED [ 76%]
+tests/test_students.py::test_admin_sees_all_students PASSED              [ 76%]
+tests/test_students.py::test_teacher_sees_only_students_in_assigned_classes PASSED [ 77%]
+tests/test_students.py::test_teacher_with_no_assignments_sees_no_students PASSED [ 78%]
+tests/test_students.py::test_parent_sees_only_their_own_children PASSED  [ 78%]
+tests/test_students.py::test_list_students_filter_by_class_id PASSED     [ 79%]
+tests/test_students.py::test_list_students_filter_by_grade PASSED        [ 79%]
+tests/test_students.py::test_list_students_bad_class_id_is_validation_error PASSED [ 80%]
+tests/test_students.py::test_get_student_not_found PASSED                [ 81%]
+tests/test_students.py::test_get_student_forbidden_for_unrelated_parent PASSED [ 81%]
+tests/test_students.py::test_get_student_success_for_admin PASSED        [ 82%]
+tests/test_students.py::test_create_student_requires_admin PASSED        [ 82%]
+tests/test_students.py::test_create_student_success PASSED               [ 83%]
+tests/test_students.py::test_create_student_missing_admission_no_validation_error PASSED [ 84%]
+tests/test_students.py::test_create_student_duplicate_email_conflict PASSED [ 84%]
+tests/test_students.py::test_create_student_duplicate_admission_no_conflict PASSED [ 85%]
+tests/test_students.py::test_update_student_requires_admin PASSED        [ 85%]
+tests/test_students.py::test_update_student_success PASSED               [ 86%]
+tests/test_students.py::test_update_student_invalid_status_validation_error PASSED [ 87%]
+tests/test_students.py::test_update_student_not_found PASSED             [ 87%]
+tests/test_students.py::test_update_student_duplicate_admission_no_conflict PASSED [ 88%]
+tests/test_students.py::test_delete_student_requires_admin PASSED        [ 89%]
+tests/test_students.py::test_delete_student_not_found PASSED             [ 89%]
+tests/test_students.py::test_delete_student_cascades_to_user_row PASSED  [ 90%]
+tests/test_teachers.py::test_list_teachers_requires_admin PASSED         [ 90%]
+tests/test_teachers.py::test_list_teachers_requires_authentication PASSED [ 91%]
+tests/test_teachers.py::test_list_teachers_success PASSED                [ 92%]
+tests/test_teachers.py::test_get_teacher_not_found PASSED                [ 92%]
+tests/test_teachers.py::test_get_teacher_success PASSED                  [ 93%]
+tests/test_teachers.py::test_create_teacher_requires_admin PASSED        [ 93%]
+tests/test_teachers.py::test_create_teacher_success PASSED               [ 94%]
+tests/test_teachers.py::test_create_teacher_missing_fields_validation_error PASSED [ 95%]
+tests/test_teachers.py::test_create_teacher_duplicate_email_conflict PASSED [ 95%]
+tests/test_teachers.py::test_update_teacher_requires_admin PASSED        [ 96%]
+tests/test_teachers.py::test_update_teacher_empty_body_is_a_no_op PASSED [ 96%]
+tests/test_teachers.py::test_update_teacher_any_field_is_rejected PASSED [ 97%]
+tests/test_teachers.py::test_update_teacher_not_found PASSED             [ 98%]
+tests/test_teachers.py::test_delete_teacher_requires_admin PASSED        [ 98%]
+tests/test_teachers.py::test_delete_teacher_not_found PASSED             [ 99%]
+tests/test_teachers.py::test_delete_teacher_cascades_to_user_row PASSED  [100%]
+
+============================== warnings summary ===============================
+tests/test_assignments.py: 14 warnings
+tests/test_attendance.py: 31 warnings
+tests/test_auth.py: 13 warnings
+tests/test_classes.py: 21 warnings
+tests/test_parents.py: 16 warnings
+tests/test_resources.py: 43 warnings
+tests/test_students.py: 25 warnings
+tests/test_teachers.py: 16 warnings
+  C:\Users\91949\Documents\MAY2026-Team-025\backend\app\utils\jwt_callbacks.py:16: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    return User.query.get(int(jwt_data["sub"]))
+
+tests/test_assignments.py::test_create_assignment_success
+tests/test_assignments.py::test_create_assignment_nonexistent_class_not_found
+tests/test_assignments.py::test_create_assignment_nonexistent_subject_not_found
+tests/test_assignments.py::test_create_assignment_nonexistent_teacher_not_found
+tests/test_assignments.py::test_create_assignment_duplicate_class_subject_conflict
+  C:\Users\91949\Documents\MAY2026-Team-025\backend\app\services\assignment_service.py:44: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    if SchoolClass.query.get(class_id) is None:
+
+tests/test_assignments.py::test_create_assignment_success
+tests/test_assignments.py::test_create_assignment_nonexistent_subject_not_found
+tests/test_assignments.py::test_create_assignment_nonexistent_teacher_not_found
+tests/test_assignments.py::test_create_assignment_duplicate_class_subject_conflict
+  C:\Users\91949\Documents\MAY2026-Team-025\backend\app\services\assignment_service.py:46: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    if Subject.query.get(subject_id) is None:
+
+tests/test_assignments.py::test_create_assignment_success
+tests/test_assignments.py::test_create_assignment_nonexistent_teacher_not_found
+tests/test_assignments.py::test_create_assignment_duplicate_class_subject_conflict
+  C:\Users\91949\Documents\MAY2026-Team-025\backend\app\services\assignment_service.py:48: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    if Teacher.query.get(teacher_id) is None:
+
+tests/test_assignments.py::test_delete_assignment_success
+tests/test_assignments.py::test_delete_assignment_not_found
+  C:\Users\91949\Documents\MAY2026-Team-025\backend\app\services\assignment_service.py:31: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    assignment = ClassSubjectTeacher.query.get(assignment_id)
+
+tests/test_attendance.py: 15 warnings
+  C:\Users\91949\Documents\MAY2026-Team-025\backend\app\services\attendance_service.py:41: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    if SchoolClass.query.get(class_id) is None:
+
+tests/test_attendance.py::test_update_attendance_success
+tests/test_attendance.py::test_update_attendance_not_found
+  C:\Users\91949\Documents\MAY2026-Team-025\backend\app\services\attendance_service.py:34: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    attendance = Attendance.query.get(attendance_id)
+
+tests/test_classes.py: 10 warnings
+  C:\Users\91949\Documents\MAY2026-Team-025\backend\app\services\class_service.py:19: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    school_class = SchoolClass.query.get(class_id)
+
+tests/test_parents.py::test_get_parent_not_found
+tests/test_parents.py::test_get_parent_success_includes_student_ids
+tests/test_parents.py::test_update_parent_success
+tests/test_parents.py::test_update_parent_not_found
+tests/test_parents.py::test_delete_parent_not_found
+tests/test_parents.py::test_delete_parent_with_linked_student_is_conflict
+tests/test_parents.py::test_delete_parent_cascades_to_user_row
+tests/test_parents.py::test_delete_parent_cascades_to_user_row
+  C:\Users\91949\Documents\MAY2026-Team-025\backend\app\services\parent_service.py:21: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    parent = Parent.query.get(parent_id)
+
+tests/test_parents.py::test_delete_parent_cascades_to_user_row
+  C:\Users\91949\Documents\MAY2026-Team-025\backend\tests\test_parents.py:130: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    assert User.query.get(user_id) is None
+
+tests/test_resources.py: 19 warnings
+  C:\Users\91949\Documents\MAY2026-Team-025\backend\app\services\resource_service.py:58: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    if SchoolClass.query.get(class_id) is None:
+
+tests/test_resources.py: 18 warnings
+  C:\Users\91949\Documents\MAY2026-Team-025\backend\app\services\resource_service.py:60: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    if Subject.query.get(subject_id) is None:
+
+tests/test_resources.py::test_get_resource_not_found
+tests/test_resources.py::test_get_resource_forbidden_for_unrelated_student
+tests/test_resources.py::test_download_returns_signed_url
+tests/test_resources.py::test_download_not_found
+tests/test_resources.py::test_download_forbidden_for_unrelated_teacher
+tests/test_resources.py::test_delete_resource_by_admin_success
+  C:\Users\91949\Documents\MAY2026-Team-025\backend\app\services\resource_service.py:111: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    resource = Resource.query.get(resource_id)
+
+tests/test_resources.py::test_delete_resource_by_admin_success
+tests/test_resources.py::test_delete_resource_by_uploading_teacher_success
+tests/test_resources.py::test_delete_resource_by_non_uploading_teacher_forbidden
+tests/test_resources.py::test_delete_resource_not_found
+tests/test_resources.py::test_delete_resource_referenced_by_homework_is_conflict
+  C:\Users\91949\Documents\MAY2026-Team-025\backend\app\services\resource_service.py:141: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    resource = Resource.query.get(resource_id)
+
+tests/test_students.py::test_get_student_not_found
+tests/test_students.py::test_get_student_forbidden_for_unrelated_parent
+tests/test_students.py::test_get_student_success_for_admin
+tests/test_students.py::test_delete_student_cascades_to_user_row
+  C:\Users\91949\Documents\MAY2026-Team-025\backend\app\services\student_service.py:62: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    student = Student.query.get(student_id)
+
+tests/test_students.py::test_update_student_success
+tests/test_students.py::test_update_student_not_found
+tests/test_students.py::test_update_student_duplicate_admission_no_conflict
+  C:\Users\91949\Documents\MAY2026-Team-025\backend\app\services\student_service.py:89: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    student = Student.query.get(student_id)
+
+tests/test_students.py::test_delete_student_not_found
+tests/test_students.py::test_delete_student_cascades_to_user_row
+  C:\Users\91949\Documents\MAY2026-Team-025\backend\app\services\student_service.py:107: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    student = Student.query.get(student_id)
+
+tests/test_students.py::test_delete_student_cascades_to_user_row
+  C:\Users\91949\Documents\MAY2026-Team-025\backend\tests\test_students.py:273: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    assert User.query.get(user_id) is None
+
+tests/test_teachers.py::test_get_teacher_not_found
+tests/test_teachers.py::test_get_teacher_success
+tests/test_teachers.py::test_update_teacher_empty_body_is_a_no_op
+tests/test_teachers.py::test_update_teacher_not_found
+tests/test_teachers.py::test_delete_teacher_not_found
+tests/test_teachers.py::test_delete_teacher_cascades_to_user_row
+tests/test_teachers.py::test_delete_teacher_cascades_to_user_row
+  C:\Users\91949\Documents\MAY2026-Team-025\backend\app\services\teacher_service.py:19: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    teacher = Teacher.query.get(teacher_id)
+
+tests/test_teachers.py::test_delete_teacher_cascades_to_user_row
+  C:\Users\91949\Documents\MAY2026-Team-025\backend\tests\test_teachers.py:129: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    assert User.query.get(user_id) is None
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+================ 164 passed, 295 warnings in 123.76s (0:02:03) ================
+EXIT CODE: 0
