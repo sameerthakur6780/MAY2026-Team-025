@@ -8,7 +8,7 @@ export function roleHome(role) {
 }
 
 export const ROLE_LABEL = {
-  admin: "Admin / Tutor",
+  admin: "Admin",
   teacher: "Teacher",
   parent: "Parent",
   student: "Student",

@@ -68,7 +68,7 @@ export default function Login() {
             <div className="w-9 h-9 rounded-lg bg-white flex items-center justify-center">
               <GraduationCap className="w-5 h-5 text-forest" />
             </div>
-            <span className="font-display font-bold text-xl">EduCore</span>
+            <span className="font-display font-bold text-xl">SmartBatch</span>
           </Link>
           <div className="max-w-md">
             <div className="text-xs tracking-[0.2em] uppercase font-bold text-sage mb-3">Welcome back</div>
@@ -79,7 +79,7 @@ export default function Login() {
               Attendance in a photo, fees on autopilot, homework verified by AI — everything you left on WhatsApp lives here now.
             </p>
           </div>
-          <div className="text-xs text-white/50">© 2026 EduCore</div>
+          <div className="text-xs text-white/50">© 2026 SmartBatch</div>
         </div>
       </div>
 
@@ -90,7 +90,7 @@ export default function Login() {
             <ArrowLeft className="w-4 h-4" /> Back to home
           </Link>
           <h1 className="font-display text-3xl sm:text-4xl font-bold text-forest tracking-tight">Sign in</h1>
-          <p className="text-[#5C5C5C] mt-2">Continue to your EduCore portal</p>
+          <p className="text-[#5C5C5C] mt-2">Continue to your SmartBatch portal</p>
 
           {/* Role tabs */}
           <div className="mt-8 grid grid-cols-4 gap-2 p-1 bg-[#F0EEE8] rounded-xl">

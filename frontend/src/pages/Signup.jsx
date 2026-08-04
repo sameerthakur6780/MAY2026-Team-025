@@ -45,7 +45,7 @@ export default function Signup() {
             <div className="w-9 h-9 rounded-lg bg-white flex items-center justify-center">
               <GraduationCap className="w-5 h-5 text-forest" />
             </div>
-            <span className="font-display font-bold text-xl">EduCore</span>
+            <span className="font-display font-bold text-xl">SmartBatch</span>
           </Link>
           <div className="max-w-md">
             <div className="text-xs tracking-[0.2em] uppercase font-bold text-sage mb-3">Get started</div>
@@ -56,7 +56,7 @@ export default function Signup() {
               No card. No setup fee. Explore every dashboard end-to-end.
             </p>
           </div>
-          <div className="text-xs text-white/50">© 2026 EduCore</div>
+          <div className="text-xs text-white/50">© 2026 SmartBatch</div>
         </div>
       </div>
 

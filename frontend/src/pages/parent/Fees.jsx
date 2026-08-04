@@ -58,7 +58,7 @@ export default function ParentFees() {
                 <div className="absolute bottom-3 left-3 w-6 h-6 bg-white border-2 border-[#1E3F33]"></div>
               </div>
             </div>
-            <div className="text-xs text-[#5C5C5C] mt-3">EduCore@ybl</div>
+            <div className="text-xs text-[#5C5C5C] mt-3">SmartBatch@ybl</div>
           </CardContent>
         </Card>
       </div>

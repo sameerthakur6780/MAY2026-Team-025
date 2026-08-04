@@ -1,4 +1,4 @@
-// Mock data used across the EduCore demo. No backend calls.
+// Mock data used across the SmartBatch demo. No backend calls.
 export const BATCHES = [
   { id: "B01", name: "Class 10 — Physics", students: 24, time: "5:00 PM – 6:30 PM" },
   { id: "B02", name: "Class 12 — Chemistry", students: 18, time: "6:45 PM – 8:15 PM" },
@@ -105,6 +105,6 @@ export function mockAssistantReply(msg) {
   if (m.includes("test") || m.includes("exam")) return "Your next test is Physics — Unit Test 4 on Feb 18. Topics: Gravitation & Fluids. Want a revision plan?";
   if (m.includes("timetable") || m.includes("schedule") || m.includes("tomorrow")) return "Tomorrow: Mathematics at 4:00 PM (Room 3), then Physics practice test at 5:00 PM (Room 2).";
   if (m.includes("newton")) return "Newton's 3rd law: For every action there is an equal and opposite reaction. When you push a wall, the wall pushes you back with the same force.";
-  if (m.includes("hi") || m.includes("hello")) return "Hey! I'm your EduCore assistant. Ask me about homework, tests, or any concept you're stuck on.";
+  if (m.includes("hi") || m.includes("hello")) return "Hey! I'm your SmartBatch assistant. Ask me about homework, tests, or any concept you're stuck on.";
   return "Got it — I've noted your question. For deeper doubts your tutor will follow up in class. Meanwhile, try rephrasing or ask about homework, tests or timetable.";
 }

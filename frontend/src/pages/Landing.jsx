@@ -24,7 +24,7 @@ export default function Landing() {
           <div className="w-9 h-9 rounded-lg bg-forest flex items-center justify-center">
             <GraduationCap className="w-5 h-5 text-white" strokeWidth={2} />
           </div>
-          <span className="font-display font-bold text-forest text-xl">EduCore</span>
+          <span className="font-display font-bold text-forest text-xl">SmartBatch</span>
         </div>
         <div className="flex items-center gap-3">
           <Link to="/login" data-testid="nav-login-link">
@@ -47,7 +47,7 @@ export default function Landing() {
             <span className="text-terracotta">More teaching.</span>
           </h1>
           <p className="mt-6 text-base sm:text-lg text-[#5C5C5C] max-w-xl leading-relaxed">
-            EduCore turns messy WhatsApp groups, paper registers and manual fee chasing into one calm, AI-assisted platform for tutors, parents and students.
+            SmartBatch turns messy WhatsApp groups, paper registers and manual fee chasing into one calm, AI-assisted platform for tutors, parents and students.
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-4">
             <Link to="/signup" data-testid="hero-cta-primary">
@@ -159,7 +159,7 @@ export default function Landing() {
       </section>
 
       <footer className="max-w-7xl mx-auto px-6 lg:px-8 py-10 flex items-center justify-between text-sm text-[#5C5C5C]">
-        <div>© 2026 EduCore. Demo build.</div>
+        <div>© 2026 SmartBatch. Demo build.</div>
         <div>Made with care for tutoring centres.</div>
       </footer>
     </div>

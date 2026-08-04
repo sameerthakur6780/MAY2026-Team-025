@@ -9,7 +9,7 @@ import { Sparkles, Send, Bot, User } from "lucide-react";
 
 export default function StudentAssistant() {
   const [messages, setMessages] = useState([
-    { role: "assistant", content: "Hi Aarav! I'm your EduCore AI assistant. Ask me about homework, tests, timetable or any concept you're stuck on." },
+    { role: "assistant", content: "Hi Aarav! I'm your SmartBatch AI assistant. Ask me about homework, tests, timetable or any concept you're stuck on." },
   ]);
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);
@@ -40,7 +40,7 @@ export default function StudentAssistant() {
               <Sparkles className="w-5 h-5 text-white" />
             </div>
             <div>
-              <div className="font-display font-semibold text-[#1C1C1C]">EduCore Assistant</div>
+              <div className="font-display font-semibold text-[#1C1C1C]">SmartBatch Assistant</div>
               <div className="text-xs text-forest inline-flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-forest animate-pulse" /> Online
               </div>

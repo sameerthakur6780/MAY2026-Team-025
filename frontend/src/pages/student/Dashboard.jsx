@@ -48,7 +48,7 @@ export default function StudentDashboard() {
                 <Sparkles className="w-5 h-5" />
               </div>
               <div className="font-display text-xl font-semibold leading-snug">Stuck on a concept?</div>
-              <div className="text-sm text-white/70 mt-2">Chat with your EduCore AI assistant — 24/7, no waiting.</div>
+              <div className="text-sm text-white/70 mt-2">Chat with your SmartBatch AI assistant — 24/7, no waiting.</div>
               <Link to="/student/assistant" data-testid="link-ai-assistant" className="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-terracotta hover:gap-2 transition-all">
                 Open AI chat <ArrowRight className="w-4 h-4" />
               </Link>

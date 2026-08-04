@@ -23,7 +23,7 @@ export default function DashboardLayout({ title, subtitle, nav, children }) {
               <GraduationCap className="w-5 h-5 text-white" strokeWidth={2} />
             </div>
             <div>
-              <div className="font-display font-bold text-forest text-lg leading-none">EduCore</div>
+              <div className="font-display font-bold text-forest text-lg leading-none">SmartBatch</div>
               <div className="text-[10px] tracking-[0.2em] uppercase text-[#5C5C5C] mt-1">
                 {ROLE_LABEL[user?.role] || "Portal"}
               </div>
