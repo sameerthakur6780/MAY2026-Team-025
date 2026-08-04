@@ -1,5 +1,6 @@
 import { useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
+import AttendanceHistoryView from "@/components/attendance/AttendanceHistoryView";
 import { ADMIN_NAV } from "@/lib/navConfig";
 import { STUDENTS, BATCHES } from "@/lib/mockData";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,6 +11,7 @@ import { Camera, Sparkles, CheckCircle2, Bell } from "lucide-react";
 import { toast } from "sonner";
 
 export default function AdminAttendance() {
+  const [view, setView] = useState("ai");
   const [batch, setBatch] = useState("B01");
   const [photoName, setPhotoName] = useState("");
   const [detected, setDetected] = useState([]);
@@ -39,7 +41,30 @@ export default function AdminAttendance() {
   };
 
   return (
-    <DashboardLayout title="AI Photo Attendance" subtitle="One classroom photo. Everyone marked. Parents notified." nav={ADMIN_NAV}>
+    <DashboardLayout title="Attendance" subtitle="AI photo attendance and manual attendance history." nav={ADMIN_NAV}>
+      <div className="flex gap-2 mb-6">
+        <Button
+          data-testid="view-ai"
+          variant={view === "ai" ? "default" : "outline"}
+          className={view === "ai" ? "bg-forest hover:bg-[#162D24] text-white rounded-full px-5" : "border-soft rounded-full px-5"}
+          onClick={() => setView("ai")}
+        >
+          AI photo attendance
+        </Button>
+        <Button
+          data-testid="view-history"
+          variant={view === "history" ? "default" : "outline"}
+          className={view === "history" ? "bg-forest hover:bg-[#162D24] text-white rounded-full px-5" : "border-soft rounded-full px-5"}
+          onClick={() => setView("history")}
+        >
+          History
+        </Button>
+      </div>
+
+      {view === "history" ? (
+        <AttendanceHistoryView />
+      ) : (
+      <>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-2 border-soft shadow-none">
           <CardContent className="p-6">
@@ -122,6 +147,8 @@ export default function AdminAttendance() {
             </div>
           </CardContent>
         </Card>
+      )}
+      </>
       )}
     </DashboardLayout>
   );

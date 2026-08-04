@@ -1,4 +1,4 @@
-import { LayoutDashboard, Wallet, Camera, FolderOpen, BookOpen, ClipboardCheck, Megaphone, Bell, LineChart, CalendarDays, MessageCircle, GraduationCap, School, Presentation, Users, ClipboardList } from "lucide-react";
+import { LayoutDashboard, Wallet, Camera, FolderOpen, BookOpen, ClipboardCheck, Megaphone, Bell, LineChart, CalendarDays, CalendarClock, MessageCircle, GraduationCap, School, Presentation, Users, ClipboardList } from "lucide-react";
 
 export const ADMIN_NAV = [
   { to: "/admin/dashboard", key: "admin-dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -17,11 +17,13 @@ export const ADMIN_NAV = [
 
 export const TEACHER_NAV = [
   { to: "/teacher/dashboard", key: "teacher-dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/teacher/attendance", key: "teacher-attendance", label: "Attendance", icon: CalendarClock },
   { to: "/teacher/resources", key: "teacher-resources", label: "Resources", icon: FolderOpen },
 ];
 
 export const PARENT_NAV = [
   { to: "/parent/dashboard", key: "parent-dashboard", label: "Overview", icon: LayoutDashboard },
+  { to: "/parent/attendance", key: "parent-attendance", label: "Attendance", icon: CalendarClock },
   { to: "/parent/safety", key: "parent-safety", label: "Safety Feed", icon: Bell },
   { to: "/parent/fees", key: "parent-fees", label: "Fees & Pay", icon: Wallet },
   { to: "/parent/performance", key: "parent-performance", label: "Performance", icon: LineChart },
@@ -30,6 +32,7 @@ export const PARENT_NAV = [
 
 export const STUDENT_NAV = [
   { to: "/student/dashboard", key: "student-dashboard", label: "My Plan", icon: CalendarDays },
+  { to: "/student/attendance", key: "student-attendance", label: "Attendance", icon: CalendarClock },
   { to: "/student/resources", key: "student-resources", label: "Resources", icon: FolderOpen },
   { to: "/student/homework", key: "student-homework", label: "Homework", icon: BookOpen },
   { to: "/student/assistant", key: "student-assistant", label: "AI Assistant", icon: MessageCircle },
