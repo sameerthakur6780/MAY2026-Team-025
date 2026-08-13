@@ -1,40 +1,18 @@
-import { useEffect, useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
+import EmptyState from "@/components/EmptyState";
 import { TEACHER_NAV } from "@/lib/navConfig";
 import { useAuth } from "@/context/AuthContext";
-import { api, ApiError } from "@/lib/apiClient";
+import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { Card, CardContent } from "@/components/ui/card";
-import { Users, GraduationCap } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Users, GraduationCap, School } from "lucide-react";
+
+const PER_PAGE_100 = { per_page: 100 };
 
 export default function TeacherDashboard() {
   const { user } = useAuth();
-  const [classes, setClasses] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    (async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        // Already scoped server-side to this teacher's assigned classes.
-        const data = await api.get("/api/classes");
-        if (!cancelled) setClasses(data.items || []);
-      } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof ApiError ? err.message : "Could not load your classes.");
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  // Already scoped server-side to this teacher's assigned classes.
+  const { items: classes, loading, error, refetch } = usePaginatedList("/api/classes", PER_PAGE_100);
 
   return (
     <DashboardLayout
@@ -51,18 +29,30 @@ export default function TeacherDashboard() {
             </div>
           </div>
 
-          {loading && <div className="text-sm text-muted-foreground" data-testid="teacher-classes-loading">Loading your classes...</div>}
+          {loading && (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4" data-testid="teacher-classes-loading">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} className="h-[72px] w-full rounded-xl" />
+              ))}
+            </div>
+          )}
 
           {!loading && error && (
-            <div className="text-sm text-coral" data-testid="teacher-classes-error">
-              {error}
+            <div className="text-sm text-coral py-6" data-testid="teacher-classes-error">
+              Couldn't load your classes: {error}{" "}
+              <button className="underline font-semibold" onClick={refetch}>
+                Retry
+              </button>
             </div>
           )}
 
           {!loading && !error && classes.length === 0 && (
-            <div className="text-sm text-muted-foreground" data-testid="teacher-classes-empty">
-              You don't have any classes assigned yet.
-            </div>
+            <EmptyState
+              icon={School}
+              title="No classes yet"
+              description="You don't have any classes assigned yet."
+              data-testid="teacher-classes-empty"
+            />
           )}
 
           {!loading && !error && classes.length > 0 && (

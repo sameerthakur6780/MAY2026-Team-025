@@ -30,6 +30,12 @@ def next_id():
     return next(_id_counter)
 
 
+def default_phone():
+    """A deterministic, valid-format (10-digit, starts with 6-9) phone
+    number for tests that don't care about the actual value."""
+    return f"9{next_id():09d}"
+
+
 class TestConfig:
     TESTING = True
     SECRET_KEY = "test-secret"
@@ -179,12 +185,13 @@ def login_as(raw_client, email, password=PASSWORD):
 # ---------------------------------------------------------------------------
 
 
-def create_admin_user(email=None, full_name="Test Admin"):
+def create_admin_user(email=None, full_name="Test Admin", phone=None):
     email = email or f"admin{next_id()}@test.com"
     user = User(
         full_name=full_name,
         email=email,
         password_hash=bcrypt.generate_password_hash(PASSWORD).decode("utf-8"),
+        phone=phone or default_phone(),
         role=RoleEnum.ADMIN,
     )
     _db.session.add(user)
@@ -195,12 +202,18 @@ def create_admin_user(email=None, full_name="Test Admin"):
 def create_teacher(email=None, full_name="Test Teacher", phone=None):
     email = email or f"teacher{next_id()}@test.com"
     user = create_managed_account(
-        {"role": "teacher", "full_name": full_name, "email": email, "password": PASSWORD, "phone": phone}
+        {
+            "role": "teacher",
+            "full_name": full_name,
+            "email": email,
+            "password": PASSWORD,
+            "phone": phone or default_phone(),
+        }
     )
     return user.teacher
 
 
-def create_parent(email=None, full_name="Test Parent", occupation=None, address=None):
+def create_parent(email=None, full_name="Test Parent", phone=None, occupation=None, address=None):
     email = email or f"parent{next_id()}@test.com"
     user = create_managed_account(
         {
@@ -208,6 +221,7 @@ def create_parent(email=None, full_name="Test Parent", occupation=None, address=
             "full_name": full_name,
             "email": email,
             "password": PASSWORD,
+            "phone": phone or default_phone(),
             "occupation": occupation,
             "address": address,
         }
@@ -215,7 +229,7 @@ def create_parent(email=None, full_name="Test Parent", occupation=None, address=
     return user.parent
 
 
-def create_student(email=None, full_name="Test Student", admission_no=None, class_id=None, parent_id=None):
+def create_student(email=None, full_name="Test Student", phone=None, admission_no=None, class_id=None, parent_id=None):
     email = email or f"student{next_id()}@test.com"
     admission_no = admission_no or f"ADM{next_id()}"
     user = create_managed_account(
@@ -224,6 +238,7 @@ def create_student(email=None, full_name="Test Student", admission_no=None, clas
             "full_name": full_name,
             "email": email,
             "password": PASSWORD,
+            "phone": phone or default_phone(),
             "admission_no": admission_no,
             "class_id": class_id,
             "parent_id": parent_id,

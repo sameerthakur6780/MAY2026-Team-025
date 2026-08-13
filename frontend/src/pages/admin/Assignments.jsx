@@ -36,11 +36,11 @@ export default function AdminAssignments() {
   const [teachers, setTeachers] = useState([]);
   const [subjects, setSubjects] = useState([]);
 
-  const loadSubjects = () => api.get("/api/subjects?per_page=100").then((d) => setSubjects(d.items)).catch(() => {});
+  const loadSubjects = () => api.get("/api/subjects?per_page=100").then((d) => setSubjects(d.items)).catch(() => toast.error("Couldn't load the subject list."));
 
   useEffect(() => {
-    api.get("/api/classes?per_page=100").then((d) => setClasses(d.items)).catch(() => {});
-    api.get("/api/teachers?per_page=100").then((d) => setTeachers(d.items)).catch(() => {});
+    api.get("/api/classes?per_page=100").then((d) => setClasses(d.items)).catch(() => toast.error("Couldn't load the class list."));
+    api.get("/api/teachers?per_page=100").then((d) => setTeachers(d.items)).catch(() => toast.error("Couldn't load the teacher list."));
     loadSubjects();
   }, []);
 

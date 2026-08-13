@@ -26,7 +26,7 @@ export default function AdminTeachers() {
   const [classes, setClasses] = useState([]);
 
   useEffect(() => {
-    api.get("/api/classes?per_page=100").then((d) => setClasses(d.items)).catch(() => {});
+    api.get("/api/classes?per_page=100").then((d) => setClasses(d.items)).catch(() => toast.error("Couldn't load the class list."));
   }, []);
 
   const gradeFor = (classId) => classes.find((c) => c.id === classId)?.grade;
@@ -181,7 +181,7 @@ export default function AdminTeachers() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>Password</Label>
-                <Input required type="password" placeholder="At least 6 characters" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+                <Input required type="password" minLength={6} title="At least 6 characters" placeholder="At least 6 characters" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
               </div>
               <div className="space-y-1.5">
                 <Label>Phone</Label>

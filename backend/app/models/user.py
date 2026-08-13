@@ -18,7 +18,7 @@ class User(db.Model, TimestampMixin):
     full_name = db.Column(db.String(120), nullable=False)
     email = db.Column(db.String(255), nullable=False, unique=True, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
-    phone = db.Column(db.String(20))
+    phone = db.Column(db.String(20), nullable=False)
     role = db.Column(db.Enum(RoleEnum), nullable=False, index=True)
 
     teacher = db.relationship("Teacher", back_populates="user", uselist=False, cascade="all, delete-orphan")

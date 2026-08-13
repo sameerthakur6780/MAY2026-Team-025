@@ -186,7 +186,7 @@ export default function AdminParents() {
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <Label>Password</Label>
-                    <Input required type="password" placeholder="At least 6 characters" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+                    <Input required type="password" minLength={6} title="At least 6 characters" placeholder="At least 6 characters" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
                   </div>
                   <div className="space-y-1.5">
                     <Label>Phone</Label>

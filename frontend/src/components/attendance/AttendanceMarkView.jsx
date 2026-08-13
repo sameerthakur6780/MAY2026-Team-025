@@ -34,7 +34,7 @@ export default function AttendanceMarkView() {
 
   useEffect(() => {
     // Already scoped server-side to this teacher's assigned classes.
-    api.get("/api/classes?per_page=100").then((d) => setClasses(d.items)).catch(() => {});
+    api.get("/api/classes?per_page=100").then((d) => setClasses(d.items)).catch(() => toast.error("Couldn't load the class list."));
   }, []);
 
   const loadRosterAndAttendance = async () => {

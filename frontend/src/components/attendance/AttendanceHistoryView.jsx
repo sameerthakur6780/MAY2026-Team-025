@@ -50,11 +50,11 @@ export default function AttendanceHistoryView() {
 
   useEffect(() => {
     if (user?.role === "admin" || user?.role === "teacher") {
-      api.get("/api/classes?per_page=100").then((d) => setClasses(d.items)).catch(() => {});
+      api.get("/api/classes?per_page=100").then((d) => setClasses(d.items)).catch(() => toast.error("Couldn't load the class list."));
     }
     if (user?.role === "parent") {
       // Already scoped server-side to this parent's own children.
-      api.get("/api/students?per_page=100").then((d) => setChildren(d.items)).catch(() => {});
+      api.get("/api/students?per_page=100").then((d) => setChildren(d.items)).catch(() => toast.error("Couldn't load your children's list."));
     }
   }, [user?.role]);
 

@@ -158,6 +158,7 @@ def test_create_student_success(admin):
             "full_name": "Brand New Student",
             "email": "bns@test.com",
             "password": "Password123",
+            "phone": "9876543210",
             "admission_no": "ADM-500",
             "class_id": school_class.id,
         },
@@ -181,7 +182,13 @@ def test_create_student_duplicate_email_conflict(admin):
     create_student(email="taken@test.com")
     resp = admin.post(
         "/api/students",
-        json={"full_name": "Dup", "email": "taken@test.com", "password": "Password123", "admission_no": "ADM-9"},
+        json={
+            "full_name": "Dup",
+            "email": "taken@test.com",
+            "password": "Password123",
+            "phone": "9876543211",
+            "admission_no": "ADM-9",
+        },
     )
     assert resp.status_code == 409
     assert resp.get_json()["error"] == "email_taken"
@@ -195,6 +202,7 @@ def test_create_student_duplicate_admission_no_conflict(admin):
             "full_name": "Dup Admission",
             "email": "dupadm@test.com",
             "password": "Password123",
+            "phone": "9876543212",
             "admission_no": "DUPADM",
         },
     )

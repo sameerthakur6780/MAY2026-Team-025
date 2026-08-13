@@ -51,12 +51,17 @@ def test_create_teacher_requires_admin(parent):
 def test_create_teacher_success(admin):
     resp = admin.post(
         "/api/teachers",
-        json={"full_name": "New Teacher", "email": "newteach@test.com", "password": "Password123", "phone": "12345"},
+        json={
+            "full_name": "New Teacher",
+            "email": "newteach@test.com",
+            "password": "Password123",
+            "phone": "9876543210",
+        },
     )
     assert resp.status_code == 201
     body = resp.get_json()
     assert body["full_name"] == "New Teacher"
-    assert body["phone"] == "12345"
+    assert body["phone"] == "9876543210"
     assert body["assigned_class_ids"] == []
 
 
@@ -67,13 +72,25 @@ def test_create_teacher_missing_fields_validation_error(admin):
     assert body["error"] == "validation_error"
     assert "full_name" in body["message"]
     assert "password" in body["message"]
+    assert "phone" in body["message"]
+
+
+def test_create_teacher_invalid_phone_format_validation_error(admin):
+    resp = admin.post(
+        "/api/teachers",
+        json={"full_name": "Bad Phone", "email": "badphoneteach@test.com", "password": "Password123", "phone": "5551234567"},
+    )
+    assert resp.status_code == 400
+    body = resp.get_json()
+    assert body["error"] == "validation_error"
+    assert "phone" in body["message"]
 
 
 def test_create_teacher_duplicate_email_conflict(admin):
     create_teacher(email="dupteach@test.com")
     resp = admin.post(
         "/api/teachers",
-        json={"full_name": "Dup", "email": "dupteach@test.com", "password": "Password123"},
+        json={"full_name": "Dup", "email": "dupteach@test.com", "password": "Password123", "phone": "9876543211"},
     )
     assert resp.status_code == 409
     assert resp.get_json()["error"] == "email_taken"
