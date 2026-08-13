@@ -117,7 +117,7 @@ export default function AdminAssignments() {
         <CardContent className="p-6">
           <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
             <div>
-              <div className="text-xs tracking-[0.2em] uppercase font-bold text-[#5C5C5C]">Timetable</div>
+              <div className="text-xs tracking-[0.2em] uppercase font-bold text-muted-foreground">Timetable</div>
               <div className="font-display text-xl font-semibold mt-1">Class &middot; Subject &middot; Teacher</div>
             </div>
             <div className="flex items-center gap-2">
@@ -147,7 +147,7 @@ export default function AdminAssignments() {
                   ))}
                 </SelectContent>
               </Select>
-              <Button data-testid="add-assignment-btn" onClick={openCreate} className="bg-forest hover:bg-[#162D24] text-white">
+              <Button data-testid="add-assignment-btn" onClick={openCreate} className="bg-coral hover:bg-coral-deep text-ink">
                 <Plus className="w-4 h-4" /> New Assignment
               </Button>
             </div>
@@ -162,7 +162,7 @@ export default function AdminAssignments() {
           )}
 
           {!loading && error && (
-            <div className="text-sm text-terracotta py-6" data-testid="assignments-error">
+            <div className="text-sm text-coral py-6" data-testid="assignments-error">
               Couldn't load assignments: {error}{" "}
               <button className="underline font-semibold" onClick={refetch}>
                 Retry
@@ -176,7 +176,7 @@ export default function AdminAssignments() {
               title="No assignments yet"
               description="Assign a teacher to a class and subject to get started."
               action={
-                <Button onClick={openCreate} className="bg-forest hover:bg-[#162D24] text-white">
+                <Button onClick={openCreate} className="bg-coral hover:bg-coral-deep text-ink">
                   <Plus className="w-4 h-4" /> New Assignment
                 </Button>
               }
@@ -202,7 +202,7 @@ export default function AdminAssignments() {
                       <TableCell>{a.teacher_name}</TableCell>
                       <TableCell className="text-right">
                         <Button variant="ghost" size="icon" data-testid={`delete-assignment-${a.id}`} onClick={() => setDeleteTarget(a)}>
-                          <Trash2 className="w-4 h-4 text-terracotta" />
+                          <Trash2 className="w-4 h-4 text-coral" />
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -243,7 +243,7 @@ export default function AdminAssignments() {
                 <button
                   type="button"
                   data-testid="toggle-new-subject"
-                  className="text-xs text-terracotta hover:underline font-semibold"
+                  className="text-xs text-coral hover:underline font-semibold"
                   onClick={() => setNewSubjectOpen((v) => !v)}
                 >
                   {newSubjectOpen ? "Cancel" : "+ New subject"}
@@ -257,7 +257,7 @@ export default function AdminAssignments() {
                     value={newSubjectName}
                     onChange={(e) => setNewSubjectName(e.target.value)}
                   />
-                  <Button type="button" onClick={handleAddSubject} disabled={addingSubject} className="bg-forest hover:bg-[#162D24] text-white shrink-0">
+                  <Button type="button" onClick={handleAddSubject} disabled={addingSubject} className="bg-coral hover:bg-coral-deep text-ink shrink-0">
                     {addingSubject ? "Adding..." : "Add"}
                   </Button>
                 </div>
@@ -297,7 +297,7 @@ export default function AdminAssignments() {
               <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={submitting || !canSubmit} className="bg-forest hover:bg-[#162D24] text-white">
+              <Button type="submit" disabled={submitting || !canSubmit} className="bg-coral hover:bg-coral-deep text-ink">
                 {submitting ? "Saving..." : "Create assignment"}
               </Button>
             </DialogFooter>

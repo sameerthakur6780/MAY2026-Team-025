@@ -87,10 +87,10 @@ export default function AdminParents() {
         <CardContent className="p-6">
           <div className="flex items-center justify-between mb-5">
             <div>
-              <div className="text-xs tracking-[0.2em] uppercase font-bold text-[#5C5C5C]">Families</div>
+              <div className="text-xs tracking-[0.2em] uppercase font-bold text-muted-foreground">Families</div>
               <div className="font-display text-xl font-semibold mt-1">All parents</div>
             </div>
-            <Button data-testid="add-parent-btn" onClick={openCreate} className="bg-forest hover:bg-[#162D24] text-white">
+            <Button data-testid="add-parent-btn" onClick={openCreate} className="bg-coral hover:bg-coral-deep text-ink">
               <Plus className="w-4 h-4" /> Add Parent
             </Button>
           </div>
@@ -104,7 +104,7 @@ export default function AdminParents() {
           )}
 
           {!loading && error && (
-            <div className="text-sm text-terracotta py-6" data-testid="parents-error">
+            <div className="text-sm text-coral py-6" data-testid="parents-error">
               Couldn't load parents: {error}{" "}
               <button className="underline font-semibold" onClick={refetch}>
                 Retry
@@ -118,7 +118,7 @@ export default function AdminParents() {
               title="No parents yet"
               description="Add a parent account, then link students to them from the Students page."
               action={
-                <Button onClick={openCreate} className="bg-forest hover:bg-[#162D24] text-white">
+                <Button onClick={openCreate} className="bg-coral hover:bg-coral-deep text-ink">
                   <Plus className="w-4 h-4" /> Add Parent
                 </Button>
               }
@@ -142,17 +142,17 @@ export default function AdminParents() {
                     <TableRow key={p.id} data-testid={`parent-row-${p.id}`}>
                       <TableCell>
                         <div className="font-medium">{p.full_name}</div>
-                        <div className="text-xs text-[#5C5C5C]">{p.email}</div>
+                        <div className="text-xs text-muted-foreground">{p.email}</div>
                       </TableCell>
-                      <TableCell>{p.phone || <span className="text-[#5C5C5C]">--</span>}</TableCell>
-                      <TableCell>{p.occupation || <span className="text-[#5C5C5C]">--</span>}</TableCell>
+                      <TableCell>{p.phone || <span className="text-muted-foreground">--</span>}</TableCell>
+                      <TableCell>{p.occupation || <span className="text-muted-foreground">--</span>}</TableCell>
                       <TableCell>{p.student_ids?.length || 0}</TableCell>
                       <TableCell className="text-right">
                         <Button variant="ghost" size="icon" data-testid={`edit-parent-${p.id}`} onClick={() => openEdit(p)}>
                           <Pencil className="w-4 h-4" />
                         </Button>
                         <Button variant="ghost" size="icon" data-testid={`delete-parent-${p.id}`} onClick={() => setDeleteTarget(p)}>
-                          <Trash2 className="w-4 h-4 text-terracotta" />
+                          <Trash2 className="w-4 h-4 text-coral" />
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -196,9 +196,9 @@ export default function AdminParents() {
               </>
             )}
             {editing && (
-              <div className="p-3 rounded-lg bg-[#F7F5F0] text-sm">
+              <div className="p-3 rounded-lg bg-surface-2 text-sm">
                 <div className="font-medium">{editing.full_name}</div>
-                <div className="text-xs text-[#5C5C5C]">{editing.email}</div>
+                <div className="text-xs text-muted-foreground">{editing.email}</div>
               </div>
             )}
             <div className="grid grid-cols-2 gap-3">
@@ -215,7 +215,7 @@ export default function AdminParents() {
               <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={submitting} className="bg-forest hover:bg-[#162D24] text-white">
+              <Button type="submit" disabled={submitting} className="bg-coral hover:bg-coral-deep text-ink">
                 {submitting ? "Saving..." : editing ? "Save changes" : "Create parent"}
               </Button>
             </DialogFooter>

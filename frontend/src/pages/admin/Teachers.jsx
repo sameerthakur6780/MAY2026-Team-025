@@ -77,10 +77,10 @@ export default function AdminTeachers() {
         <CardContent className="p-6">
           <div className="flex items-center justify-between mb-5">
             <div>
-              <div className="text-xs tracking-[0.2em] uppercase font-bold text-[#5C5C5C]">Staff</div>
+              <div className="text-xs tracking-[0.2em] uppercase font-bold text-muted-foreground">Staff</div>
               <div className="font-display text-xl font-semibold mt-1">All teachers</div>
             </div>
-            <Button data-testid="add-teacher-btn" onClick={openCreate} className="bg-forest hover:bg-[#162D24] text-white">
+            <Button data-testid="add-teacher-btn" onClick={openCreate} className="bg-coral hover:bg-coral-deep text-ink">
               <Plus className="w-4 h-4" /> Add Teacher
             </Button>
           </div>
@@ -94,7 +94,7 @@ export default function AdminTeachers() {
           )}
 
           {!loading && error && (
-            <div className="text-sm text-terracotta py-6" data-testid="teachers-error">
+            <div className="text-sm text-coral py-6" data-testid="teachers-error">
               Couldn't load teachers: {error}{" "}
               <button className="underline font-semibold" onClick={refetch}>
                 Retry
@@ -108,7 +108,7 @@ export default function AdminTeachers() {
               title="No teachers yet"
               description="Add your first teacher, then assign them to classes from the Assignments page."
               action={
-                <Button onClick={openCreate} className="bg-forest hover:bg-[#162D24] text-white">
+                <Button onClick={openCreate} className="bg-coral hover:bg-coral-deep text-ink">
                   <Plus className="w-4 h-4" /> Add Teacher
                 </Button>
               }
@@ -131,25 +131,25 @@ export default function AdminTeachers() {
                     <TableRow key={t.id} data-testid={`teacher-row-${t.id}`}>
                       <TableCell>
                         <div className="font-medium">{t.full_name}</div>
-                        <div className="text-xs text-[#5C5C5C]">{t.email}</div>
+                        <div className="text-xs text-muted-foreground">{t.email}</div>
                       </TableCell>
-                      <TableCell>{t.phone || <span className="text-[#5C5C5C]">--</span>}</TableCell>
+                      <TableCell>{t.phone || <span className="text-muted-foreground">--</span>}</TableCell>
                       <TableCell>
                         {t.assigned_class_ids && t.assigned_class_ids.length > 0 ? (
                           <div className="flex flex-wrap gap-1">
                             {t.assigned_class_ids.map((cid) => (
-                              <Badge key={cid} className="bg-sage/60 text-forest border-0">
+                              <Badge key={cid} className="bg-sage/60 text-ink border-0">
                                 Grade {gradeFor(cid) ?? cid}
                               </Badge>
                             ))}
                           </div>
                         ) : (
-                          <span className="text-[#5C5C5C]">None yet</span>
+                          <span className="text-muted-foreground">None yet</span>
                         )}
                       </TableCell>
                       <TableCell className="text-right">
                         <Button variant="ghost" size="icon" data-testid={`delete-teacher-${t.id}`} onClick={() => setDeleteTarget(t)}>
-                          <Trash2 className="w-4 h-4 text-terracotta" />
+                          <Trash2 className="w-4 h-4 text-coral" />
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -192,7 +192,7 @@ export default function AdminTeachers() {
               <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={submitting} className="bg-forest hover:bg-[#162D24] text-white">
+              <Button type="submit" disabled={submitting} className="bg-coral hover:bg-coral-deep text-ink">
                 {submitting ? "Saving..." : "Create teacher"}
               </Button>
             </DialogFooter>

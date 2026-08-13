@@ -122,12 +122,12 @@ export default function AttendanceMarkView() {
       <CardContent className="p-6">
         <div className="flex flex-wrap items-end justify-between gap-3 mb-5">
           <div>
-            <div className="text-xs tracking-[0.2em] uppercase font-bold text-[#5C5C5C]">Roll call</div>
+            <div className="text-xs tracking-[0.2em] uppercase font-bold text-muted-foreground">Roll call</div>
             <div className="font-display text-xl font-semibold mt-1">Mark attendance</div>
           </div>
           <div className="flex flex-wrap items-end gap-3">
             <div className="space-y-1">
-              <Label className="text-xs text-[#5C5C5C]">Class</Label>
+              <Label className="text-xs text-muted-foreground">Class</Label>
               <Select value={classId} onValueChange={setClassId}>
                 <SelectTrigger data-testid="mark-class-select" className="w-[150px] border-soft">
                   <SelectValue placeholder="Select class" />
@@ -142,7 +142,7 @@ export default function AttendanceMarkView() {
               </Select>
             </div>
             <div className="space-y-1">
-              <Label className="text-xs text-[#5C5C5C]">Date</Label>
+              <Label className="text-xs text-muted-foreground">Date</Label>
               <Input
                 type="date"
                 data-testid="mark-date-input"
@@ -155,7 +155,7 @@ export default function AttendanceMarkView() {
         </div>
 
         {!classId && (
-          <div className="text-sm text-[#5C5C5C] py-10 text-center" data-testid="mark-no-class">
+          <div className="text-sm text-muted-foreground py-10 text-center" data-testid="mark-no-class">
             Pick a class to load its roster.
           </div>
         )}
@@ -169,7 +169,7 @@ export default function AttendanceMarkView() {
         )}
 
         {classId && !loadingRoster && rosterError && (
-          <div className="text-sm text-terracotta py-6" data-testid="mark-roster-error">
+          <div className="text-sm text-coral py-6" data-testid="mark-roster-error">
             {rosterError}{" "}
             <button className="underline font-semibold" onClick={loadRosterAndAttendance}>
               Retry
@@ -178,7 +178,7 @@ export default function AttendanceMarkView() {
         )}
 
         {classId && !loadingRoster && !rosterError && roster.length === 0 && (
-          <div className="text-sm text-[#5C5C5C] py-10 text-center" data-testid="mark-empty-roster">
+          <div className="text-sm text-muted-foreground py-10 text-center" data-testid="mark-empty-roster">
             No students are enrolled in this class yet.
           </div>
         )}
@@ -222,9 +222,9 @@ export default function AttendanceMarkView() {
                       </TableCell>
                       <TableCell>
                         {existing ? (
-                          <Badge className="bg-[#F0EEE8] text-[#5C5C5C] border-0">Already marked</Badge>
+                          <Badge className="bg-surface-2 text-muted-foreground border-0">Already marked</Badge>
                         ) : (
-                          <Badge className="bg-sage/60 text-forest border-0">Not yet marked</Badge>
+                          <Badge className="bg-sage text-ink border-0">Not yet marked</Badge>
                         )}
                       </TableCell>
                     </TableRow>
@@ -234,14 +234,14 @@ export default function AttendanceMarkView() {
             </Table>
 
             <div className="mt-5 flex items-center justify-between">
-              <div className="text-xs text-[#5C5C5C] flex items-center gap-1.5">
+              <div className="text-xs text-muted-foreground flex items-center gap-1.5">
                 <Users className="w-3.5 h-3.5" /> {roster.length} student{roster.length === 1 ? "" : "s"} in this class
               </div>
               <Button
                 data-testid="submit-attendance-btn"
                 onClick={handleSubmit}
                 disabled={submitting}
-                className="bg-forest hover:bg-[#162D24] text-white rounded-full px-6"
+                className="bg-coral hover:bg-coral-deep text-ink rounded-pill px-6"
               >
                 {submitting ? "Submitting..." : `Submit attendance for ${date}`}
               </Button>
@@ -249,19 +249,19 @@ export default function AttendanceMarkView() {
 
             {lastResult && (
               <div className="mt-5 p-4 rounded-xl border border-soft bg-canvas space-y-3" data-testid="mark-result">
-                <div className="flex items-center gap-2 text-sm font-medium text-forest">
+                <div className="flex items-center gap-2 text-sm font-medium text-lime">
                   <CheckCircle2 className="w-4 h-4" /> {lastResult.createdNames.length} newly marked
                 </div>
                 {lastResult.createdNames.length > 0 && (
-                  <div className="text-xs text-[#5C5C5C] pl-6">{lastResult.createdNames.join(", ")}</div>
+                  <div className="text-xs text-muted-foreground pl-6">{lastResult.createdNames.join(", ")}</div>
                 )}
                 {lastResult.skippedNames.length > 0 && (
                   <>
-                    <div className="flex items-center gap-2 text-sm font-medium text-[#8A6A1E]">
+                    <div className="flex items-center gap-2 text-sm font-medium text-yellow">
                       <SkipForward className="w-4 h-4" /> {lastResult.skippedNames.length} already marked for{" "}
                       {date} (unchanged -- use the Status column above to correct one)
                     </div>
-                    <div className="text-xs text-[#5C5C5C] pl-6">{lastResult.skippedNames.join(", ")}</div>
+                    <div className="text-xs text-muted-foreground pl-6">{lastResult.skippedNames.join(", ")}</div>
                   </>
                 )}
               </div>

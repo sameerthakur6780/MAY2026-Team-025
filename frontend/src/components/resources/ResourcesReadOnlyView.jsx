@@ -60,7 +60,7 @@ export default function ResourcesReadOnlyView() {
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
-        <div className="text-sm text-[#5C5C5C]">{total} resource{total === 1 ? "" : "s"} available to you</div>
+        <div className="text-sm text-muted-foreground">{total} resource{total === 1 ? "" : "s"} available to you</div>
         <div className="flex items-center gap-2">
           <Select value={classFilter} onValueChange={setClassFilter}>
             <SelectTrigger className="w-[150px] border-soft">
@@ -100,7 +100,7 @@ export default function ResourcesReadOnlyView() {
       )}
 
       {!loading && error && (
-        <div className="text-sm text-terracotta py-6" data-testid="resources-error">
+        <div className="text-sm text-coral py-6" data-testid="resources-error">
           Couldn't load resources: {error}{" "}
           <button className="underline font-semibold" onClick={refetch}>
             Retry

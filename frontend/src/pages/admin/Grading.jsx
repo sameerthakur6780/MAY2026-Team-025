@@ -34,33 +34,33 @@ export default function AdminGrading() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <Card className="border-soft shadow-none">
           <CardContent className="p-6">
-            <div className="text-xs tracking-[0.2em] uppercase font-bold text-[#5C5C5C]">Step 1</div>
+            <div className="text-xs tracking-[0.2em] uppercase font-bold text-muted-foreground">Step 1</div>
             <div className="font-display text-lg font-semibold mt-1 mb-4">Upload answer key</div>
-            <label className="block cursor-pointer border-2 border-dashed border-soft rounded-xl p-8 text-center hover:border-forest bg-canvas">
+            <label className="block cursor-pointer border-2 border-dashed border-soft rounded-xl p-8 text-center hover:border-coral bg-canvas">
               <input type="file" className="hidden" data-testid="key-input" onChange={e => setAnswerKey(e.target.files?.[0]?.name || "")} />
-              <FileText className="w-8 h-8 mx-auto text-forest mb-3" />
+              <FileText className="w-8 h-8 mx-auto text-coral mb-3" />
               <div className="text-sm font-medium">{answerKey || "Click to upload answer key"}</div>
-              <div className="text-xs text-[#5C5C5C] mt-1">PDF or image</div>
+              <div className="text-xs text-muted-foreground mt-1">PDF or image</div>
             </label>
           </CardContent>
         </Card>
 
         <Card className="border-soft shadow-none">
           <CardContent className="p-6">
-            <div className="text-xs tracking-[0.2em] uppercase font-bold text-[#5C5C5C]">Step 2</div>
+            <div className="text-xs tracking-[0.2em] uppercase font-bold text-muted-foreground">Step 2</div>
             <div className="font-display text-lg font-semibold mt-1 mb-4">Upload student sheets</div>
-            <label className="block cursor-pointer border-2 border-dashed border-soft rounded-xl p-8 text-center hover:border-forest bg-canvas">
+            <label className="block cursor-pointer border-2 border-dashed border-soft rounded-xl p-8 text-center hover:border-coral bg-canvas">
               <input type="file" multiple className="hidden" data-testid="sheet-input" onChange={e => setSheet(e.target.files?.[0]?.name || "6 files")} />
-              <ClipboardCheck className="w-8 h-8 mx-auto text-forest mb-3" />
+              <ClipboardCheck className="w-8 h-8 mx-auto text-coral mb-3" />
               <div className="text-sm font-medium">{sheet || "Click to upload student sheets"}</div>
-              <div className="text-xs text-[#5C5C5C] mt-1">Batch upload supported</div>
+              <div className="text-xs text-muted-foreground mt-1">Batch upload supported</div>
             </label>
           </CardContent>
         </Card>
       </div>
 
       <div className="flex items-center justify-center mb-8">
-        <Button data-testid="grade-btn" onClick={runGrading} disabled={processing} className="bg-forest hover:bg-[#162D24] text-white gap-2 rounded-full px-8 py-6">
+        <Button data-testid="grade-btn" onClick={runGrading} disabled={processing} className="bg-coral hover:bg-coral-deep text-ink gap-2 rounded-pill px-8 py-6">
           <Sparkles className="w-4 h-4" /> {processing ? "Grading with AI…" : "Grade with AI"}
         </Button>
       </div>
@@ -70,25 +70,25 @@ export default function AdminGrading() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-5">
               <div>
-                <div className="text-xs tracking-[0.2em] uppercase font-bold text-[#5C5C5C]">Results</div>
+                <div className="text-xs tracking-[0.2em] uppercase font-bold text-muted-foreground">Results</div>
                 <div className="font-display text-xl font-semibold mt-1">AI-verified scores</div>
               </div>
-              <div className="text-sm text-forest inline-flex items-center gap-1.5">
+              <div className="text-sm text-lime inline-flex items-center gap-1.5">
                 <CheckCircle2 className="w-4 h-4" /> Avg: {Math.round(results.reduce((a, b) => a + b.score, 0) / results.length)}%
               </div>
             </div>
             <div className="space-y-3">
               {results.map(r => (
                 <div key={r.id} data-testid={`grade-${r.id}`} className="flex items-center gap-4 p-4 rounded-xl border border-soft">
-                  <div className="w-10 h-10 rounded-full bg-sage flex items-center justify-center text-forest font-semibold text-sm">{r.name[0]}</div>
+                  <div className="w-10 h-10 rounded-full bg-sage flex items-center justify-center text-ink font-semibold text-sm">{r.name[0]}</div>
                   <div className="flex-1 min-w-0">
                     <div className="font-medium">{r.name}</div>
-                    <div className="text-xs text-[#5C5C5C]">{r.correct}/{r.total} correct</div>
+                    <div className="text-xs text-muted-foreground">{r.correct}/{r.total} correct</div>
                   </div>
                   <div className="w-40">
-                    <Progress value={r.score} className="h-2 bg-[#F0EEE8]" />
+                    <Progress value={r.score} className="h-2 bg-surface-2" />
                   </div>
-                  <Badge className={`border-0 ${r.score >= 80 ? "bg-sage/60 text-forest" : r.score >= 60 ? "bg-[#FDE8DC] text-terracotta" : "bg-[#FBD5D5] text-[#B23A48]"}`}>
+                  <Badge className={`border-0 ${r.score >= 80 ? "bg-lime text-ink" : r.score >= 60 ? "bg-yellow text-ink" : "bg-coral text-ink"}`}>
                     {r.score}%
                   </Badge>
                 </div>

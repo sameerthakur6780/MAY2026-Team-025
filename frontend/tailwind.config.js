@@ -10,6 +10,8 @@ export default {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+        pill: "999px",
+        xs: "4px",
       },
       colors: {
         background: "hsl(var(--background))",
@@ -52,6 +54,21 @@ export default {
           "4": "hsl(var(--chart-4))",
           "5": "hsl(var(--chart-5))",
         },
+        ink: "#0A0A0A",
+        deep: "#0A0A0A",
+        surface: {
+          DEFAULT: "#2C2C2C",
+          2: "#3A3A3A",
+        },
+        coral: {
+          DEFAULT: "#F65E4B",
+          deep: "#D8452F",
+        },
+        yellow: "#F9CD61",
+        lime: "#E1FFAC",
+        sky: "#BCF3FF",
+        indigo: "#7477FF",
+        sage: "#A3BAA9",
       },
       keyframes: {
         "accordion-down": {

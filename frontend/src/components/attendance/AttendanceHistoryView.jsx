@@ -17,15 +17,15 @@ import { CalendarClock } from "lucide-react";
 const ALL = "all";
 
 const STATUS_STYLES = {
-  present: "bg-sage/60 text-forest border-0",
-  absent: "bg-terracotta/10 text-terracotta border-0",
-  late: "bg-[#F3DFAF] text-[#8A6A1E] border-0",
+  present: "bg-lime text-ink border-0",
+  absent: "bg-coral text-ink border-0",
+  late: "bg-yellow text-ink border-0",
 };
 
 const STATUS_OPTIONS = ["present", "absent", "late"];
 
 function StatusBadge({ status }) {
-  return <Badge className={STATUS_STYLES[status] || "bg-[#F0EEE8] text-[#5C5C5C] border-0"}>{status}</Badge>;
+  return <Badge className={STATUS_STYLES[status] || "bg-surface-2 text-muted-foreground border-0"}>{status}</Badge>;
 }
 
 export default function AttendanceHistoryView() {
@@ -76,12 +76,12 @@ export default function AttendanceHistoryView() {
       <CardContent className="p-6">
         <div className="flex flex-wrap items-end justify-between gap-3 mb-5">
           <div>
-            <div className="text-xs tracking-[0.2em] uppercase font-bold text-[#5C5C5C]">Records</div>
+            <div className="text-xs tracking-[0.2em] uppercase font-bold text-muted-foreground">Records</div>
             <div className="font-display text-xl font-semibold mt-1">Attendance history</div>
           </div>
           <div className="flex flex-wrap items-end gap-3">
             <div className="space-y-1">
-              <Label className="text-xs text-[#5C5C5C]">From</Label>
+              <Label className="text-xs text-muted-foreground">From</Label>
               <Input
                 type="date"
                 data-testid="history-date-from"
@@ -91,7 +91,7 @@ export default function AttendanceHistoryView() {
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs text-[#5C5C5C]">To</Label>
+              <Label className="text-xs text-muted-foreground">To</Label>
               <Input
                 type="date"
                 data-testid="history-date-to"
@@ -142,7 +142,7 @@ export default function AttendanceHistoryView() {
         )}
 
         {!loading && error && (
-          <div className="text-sm text-terracotta py-6" data-testid="attendance-history-error">
+          <div className="text-sm text-coral py-6" data-testid="attendance-history-error">
             Couldn't load attendance: {error}{" "}
             <button className="underline font-semibold" onClick={refetch}>
               Retry
@@ -200,9 +200,9 @@ export default function AttendanceHistoryView() {
                       )}
                     </TableCell>
                     <TableCell>
-                      <Badge className="bg-[#F0EEE8] text-[#5C5C5C] border-0">{rec.method}</Badge>
+                      <Badge className="bg-surface-2 text-muted-foreground border-0">{rec.method}</Badge>
                     </TableCell>
-                    <TableCell className="text-[#5C5C5C]">{rec.marked_by_name}</TableCell>
+                    <TableCell className="text-muted-foreground">{rec.marked_by_name}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

@@ -18,7 +18,7 @@ export default function TeacherAttendance() {
         <Button
           data-testid="view-mark"
           variant={view === "mark" ? "default" : "outline"}
-          className={view === "mark" ? "bg-forest hover:bg-[#162D24] text-white rounded-full px-5" : "border-soft rounded-full px-5"}
+          className={view === "mark" ? "bg-coral hover:bg-coral-deep text-ink rounded-pill px-5" : "border-soft rounded-full px-5"}
           onClick={() => setView("mark")}
         >
           Mark attendance
@@ -26,7 +26,7 @@ export default function TeacherAttendance() {
         <Button
           data-testid="view-history"
           variant={view === "history" ? "default" : "outline"}
-          className={view === "history" ? "bg-forest hover:bg-[#162D24] text-white rounded-full px-5" : "border-soft rounded-full px-5"}
+          className={view === "history" ? "bg-coral hover:bg-coral-deep text-ink rounded-pill px-5" : "border-soft rounded-full px-5"}
           onClick={() => setView("history")}
         >
           History

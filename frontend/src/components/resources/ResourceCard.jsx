@@ -32,19 +32,19 @@ export default function ResourceCard({ resource, onDownload, downloading, canDel
     <Card data-testid={`resource-${resource.id}`} className="border-soft shadow-none hover:-translate-y-0.5 transition-all">
       <CardContent className="p-5">
         <div className="w-10 h-10 rounded-lg bg-sage/60 flex items-center justify-center mb-3">
-          <Icon className="w-5 h-5 text-forest" />
+          <Icon className="w-5 h-5 text-ink" />
         </div>
-        <div className="font-display font-semibold text-[#1C1C1C] leading-tight truncate" title={resource.filename}>
+        <div className="font-display font-semibold text-foreground leading-tight truncate" title={resource.filename}>
           {resource.filename}
         </div>
-        <div className="text-xs text-[#5C5C5C] mt-1">
+        <div className="text-xs text-muted-foreground mt-1">
           Grade {resource.grade} &middot; {resource.subject_name}
         </div>
         <div className="mt-3 flex items-center justify-between">
-          <Badge className="bg-sage/50 text-forest border-0">
+          <Badge className="bg-sage/50 text-ink border-0">
             {TYPE_LABEL[resource.type] || resource.type} &middot; {formatSize(resource.size)}
           </Badge>
-          <span className="text-xs text-[#5C5C5C]">{resource.uploader_name}</span>
+          <span className="text-xs text-muted-foreground">{resource.uploader_name}</span>
         </div>
         <div className="mt-4 flex items-center gap-2">
           <Button
@@ -66,7 +66,7 @@ export default function ResourceCard({ resource, onDownload, downloading, canDel
               size="sm"
               variant="ghost"
             >
-              <Trash2 className="w-4 h-4 text-terracotta" />
+              <Trash2 className="w-4 h-4 text-coral" />
             </Button>
           )}
         </div>

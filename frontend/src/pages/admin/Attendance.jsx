@@ -46,7 +46,7 @@ export default function AdminAttendance() {
         <Button
           data-testid="view-ai"
           variant={view === "ai" ? "default" : "outline"}
-          className={view === "ai" ? "bg-forest hover:bg-[#162D24] text-white rounded-full px-5" : "border-soft rounded-full px-5"}
+          className={view === "ai" ? "bg-coral hover:bg-coral-deep text-ink rounded-full px-5" : "border-soft rounded-full px-5"}
           onClick={() => setView("ai")}
         >
           AI photo attendance
@@ -54,7 +54,7 @@ export default function AdminAttendance() {
         <Button
           data-testid="view-history"
           variant={view === "history" ? "default" : "outline"}
-          className={view === "history" ? "bg-forest hover:bg-[#162D24] text-white rounded-full px-5" : "border-soft rounded-full px-5"}
+          className={view === "history" ? "bg-coral hover:bg-coral-deep text-ink rounded-full px-5" : "border-soft rounded-full px-5"}
           onClick={() => setView("history")}
         >
           History
@@ -70,7 +70,7 @@ export default function AdminAttendance() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-5">
               <div>
-                <div className="text-xs tracking-[0.2em] uppercase font-bold text-[#5C5C5C]">Step 1</div>
+                <div className="text-xs tracking-[0.2em] uppercase font-bold text-muted-foreground">Step 1</div>
                 <div className="font-display text-xl font-semibold mt-1">Upload classroom photo</div>
               </div>
               <div className="w-56">
@@ -81,23 +81,23 @@ export default function AdminAttendance() {
               </div>
             </div>
 
-            <label htmlFor="photo-upload" data-testid="upload-label" className="block cursor-pointer border-2 border-dashed border-soft rounded-2xl p-10 text-center hover:border-forest transition-colors bg-canvas">
+            <label htmlFor="photo-upload" data-testid="upload-label" className="block cursor-pointer border-2 border-dashed border-soft rounded-2xl p-10 text-center hover:border-coral transition-colors bg-canvas">
               <input id="photo-upload" type="file" accept="image/*" onChange={onFile} className="hidden" data-testid="attendance-photo-input" />
               <div className="w-14 h-14 mx-auto rounded-2xl bg-sage flex items-center justify-center mb-4">
-                <Camera className="w-6 h-6 text-forest" />
+                <Camera className="w-6 h-6 text-ink" />
               </div>
-              <div className="font-display text-lg font-semibold text-[#1C1C1C]">
+              <div className="font-display text-lg font-semibold text-foreground">
                 {photoName ? photoName : "Click to upload classroom photo"}
               </div>
-              <div className="text-sm text-[#5C5C5C] mt-1">JPG or PNG. AI face-recognition will identify present students.</div>
+              <div className="text-sm text-muted-foreground mt-1">JPG or PNG. AI face-recognition will identify present students.</div>
             </label>
 
             <div className="mt-6 flex flex-wrap items-center gap-3">
-              <Button data-testid="run-ai-btn" onClick={runAI} disabled={processing} className="bg-forest hover:bg-[#162D24] text-white gap-2 rounded-full px-6">
+              <Button data-testid="run-ai-btn" onClick={runAI} disabled={processing} className="bg-coral hover:bg-coral-deep text-ink gap-2 rounded-pill px-6">
                 <Sparkles className="w-4 h-4" /> {processing ? "Analysing…" : "Run AI attendance"}
               </Button>
               {detected.length > 0 && (
-                <Button data-testid="notify-parents-btn" onClick={notify} variant="outline" className="gap-2 rounded-full border-terracotta text-terracotta hover:bg-terracotta hover:text-white">
+                <Button data-testid="notify-parents-btn" onClick={notify} variant="outline" className="gap-2 rounded-pill border-coral text-coral hover:bg-coral hover:text-ink">
                   <Bell className="w-4 h-4" /> Notify parents
                 </Button>
               )}
@@ -107,11 +107,11 @@ export default function AdminAttendance() {
 
         <Card className="border-soft shadow-none">
           <CardContent className="p-6">
-            <div className="text-xs tracking-[0.2em] uppercase font-bold text-[#5C5C5C]">How it works</div>
-            <ol className="mt-4 space-y-4 text-sm text-[#1C1C1C]">
-              <li className="flex gap-3"><span className="w-6 h-6 rounded-full bg-sage flex items-center justify-center text-forest font-bold text-xs shrink-0">1</span> Snap a wide photo of your batch.</li>
-              <li className="flex gap-3"><span className="w-6 h-6 rounded-full bg-sage flex items-center justify-center text-forest font-bold text-xs shrink-0">2</span> AI matches faces to enrolled students.</li>
-              <li className="flex gap-3"><span className="w-6 h-6 rounded-full bg-sage flex items-center justify-center text-forest font-bold text-xs shrink-0">3</span> Push safety notification to parents.</li>
+            <div className="text-xs tracking-[0.2em] uppercase font-bold text-muted-foreground">How it works</div>
+            <ol className="mt-4 space-y-4 text-sm text-foreground">
+              <li className="flex gap-3"><span className="w-6 h-6 rounded-full bg-sage flex items-center justify-center text-ink font-bold text-xs shrink-0">1</span> Snap a wide photo of your batch.</li>
+              <li className="flex gap-3"><span className="w-6 h-6 rounded-full bg-sage flex items-center justify-center text-ink font-bold text-xs shrink-0">2</span> AI matches faces to enrolled students.</li>
+              <li className="flex gap-3"><span className="w-6 h-6 rounded-full bg-sage flex items-center justify-center text-ink font-bold text-xs shrink-0">3</span> Push safety notification to parents.</li>
             </ol>
           </CardContent>
         </Card>
@@ -122,10 +122,10 @@ export default function AdminAttendance() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-5">
               <div>
-                <div className="text-xs tracking-[0.2em] uppercase font-bold text-[#5C5C5C]">Step 2</div>
+                <div className="text-xs tracking-[0.2em] uppercase font-bold text-muted-foreground">Step 2</div>
                 <div className="font-display text-xl font-semibold mt-1">AI detection results</div>
               </div>
-              <div className="text-sm text-forest font-medium inline-flex items-center gap-1.5">
+              <div className="text-sm text-lime font-medium inline-flex items-center gap-1.5">
                 <CheckCircle2 className="w-4 h-4" /> {detected.filter(d => d.present).length}/{detected.length} present
               </div>
             </div>
@@ -133,13 +133,13 @@ export default function AdminAttendance() {
               {detected.map(s => (
                 <div key={s.id} data-testid={`detect-${s.id}`} className="flex items-center justify-between p-3 rounded-lg border border-soft">
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-sage flex items-center justify-center text-forest font-semibold text-sm">{s.name[0]}</div>
+                    <div className="w-9 h-9 rounded-full bg-sage flex items-center justify-center text-ink font-semibold text-sm">{s.name[0]}</div>
                     <div>
                       <div className="text-sm font-medium">{s.name}</div>
-                      <div className="text-xs text-[#5C5C5C]">{s.id}</div>
+                      <div className="text-xs text-muted-foreground">{s.id}</div>
                     </div>
                   </div>
-                  <Badge className={`border-0 ${s.present ? "bg-sage/60 text-forest" : "bg-[#FBD5D5] text-[#B23A48]"}`}>
+                  <Badge className={`border-0 ${s.present ? "bg-lime text-ink" : "bg-coral text-ink"}`}>
                     {s.present ? "Present" : "Absent"}
                   </Badge>
                 </div>

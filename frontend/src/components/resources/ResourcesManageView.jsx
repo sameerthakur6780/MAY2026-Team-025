@@ -162,7 +162,7 @@ export default function ResourcesManageView() {
       <CardContent className="p-6">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
           <div>
-            <div className="text-xs tracking-[0.2em] uppercase font-bold text-[#5C5C5C]">Library</div>
+            <div className="text-xs tracking-[0.2em] uppercase font-bold text-muted-foreground">Library</div>
             <div className="font-display text-xl font-semibold mt-1">Shared resources</div>
           </div>
           <div className="flex items-center gap-2">
@@ -192,7 +192,7 @@ export default function ResourcesManageView() {
                 ))}
               </SelectContent>
             </Select>
-            <Button data-testid="upload-resource-btn" onClick={openCreate} className="bg-forest hover:bg-[#162D24] text-white">
+            <Button data-testid="upload-resource-btn" onClick={openCreate} className="bg-coral hover:bg-coral-deep text-ink">
               <Plus className="w-4 h-4" /> Upload
             </Button>
           </div>
@@ -207,7 +207,7 @@ export default function ResourcesManageView() {
         )}
 
         {!loading && error && (
-          <div className="text-sm text-terracotta py-6" data-testid="resources-error">
+          <div className="text-sm text-coral py-6" data-testid="resources-error">
             Couldn't load resources: {error}{" "}
             <button className="underline font-semibold" onClick={refetch}>
               Retry
@@ -221,7 +221,7 @@ export default function ResourcesManageView() {
             title="No resources yet"
             description="Upload notes, question papers, or answer keys for your classes."
             action={
-              <Button onClick={openCreate} className="bg-forest hover:bg-[#162D24] text-white">
+              <Button onClick={openCreate} className="bg-coral hover:bg-coral-deep text-ink">
                 <Plus className="w-4 h-4" /> Upload
               </Button>
             }
@@ -306,7 +306,7 @@ export default function ResourcesManageView() {
               <Label>File</Label>
               <label
                 className={`block cursor-pointer border-2 border-dashed rounded-xl p-6 text-center bg-canvas ${
-                  fileError ? "border-terracotta" : "border-soft hover:border-forest"
+                  fileError ? "border-coral" : "border-soft hover:border-coral"
                 } ${uploading ? "pointer-events-none opacity-60" : ""}`}
               >
                 <input
@@ -318,13 +318,13 @@ export default function ResourcesManageView() {
                   onChange={handleFileChange}
                   accept={ALLOWED_EXTENSIONS.map((e) => `.${e}`).join(",")}
                 />
-                <UploadCloud className="w-5 h-5 mx-auto text-forest mb-2" />
-                <div className="text-sm text-[#5C5C5C]">
+                <UploadCloud className="w-5 h-5 mx-auto text-coral mb-2" />
+                <div className="text-sm text-muted-foreground">
                   {file ? file.name : `Click to attach a file (max ${MAX_SIZE_BYTES / (1024 * 1024)}MB)`}
                 </div>
               </label>
               {fileError && (
-                <div className="text-xs text-terracotta" data-testid="file-validation-error">
+                <div className="text-xs text-coral" data-testid="file-validation-error">
                   {fileError}
                 </div>
               )}
@@ -332,18 +332,18 @@ export default function ResourcesManageView() {
 
             {uploading && (
               <div className="space-y-1.5" data-testid="upload-progress">
-                <div className="h-2 w-full rounded-full bg-[#F0EEE8] overflow-hidden">
+                <div className="h-2 w-full rounded-full bg-surface-2 overflow-hidden">
                   {progress < 100 ? (
-                    <div className="h-full bg-forest transition-all duration-150" style={{ width: `${progress}%` }} />
+                    <div className="h-full bg-coral transition-all duration-150" style={{ width: `${progress}%` }} />
                   ) : (
                     // The client has sent every byte, but the server still has to write it
                     // to Supabase and commit the row -- that can take a while on its own,
                     // independent of upload speed. A static "100%" bar would look stuck,
                     // so this pulses instead of pretending we know how much longer it'll take.
-                    <div className="h-full w-full bg-forest animate-pulse" />
+                    <div className="h-full w-full bg-coral animate-pulse" />
                   )}
                 </div>
-                <div className="text-xs text-[#5C5C5C] text-center">
+                <div className="text-xs text-muted-foreground text-center">
                   {progress < 100 ? `Uploading... ${progress}%` : "Finishing up..."}
                 </div>
               </div>
@@ -357,7 +357,7 @@ export default function ResourcesManageView() {
                 type="submit"
                 data-testid="submit-upload-btn"
                 disabled={uploading || !file || !classId || !subjectId}
-                className="bg-forest hover:bg-[#162D24] text-white"
+                className="bg-coral hover:bg-coral-deep text-ink"
               >
                 {uploading ? (progress < 100 ? `Uploading... ${progress}%` : "Finishing up...") : "Upload"}
               </Button>
