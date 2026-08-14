@@ -250,6 +250,7 @@ def test_create_homework_schedules_notification_for_each_enrolled_student(admin,
             "subject_id": subject.id,
             "title": "Chapter 4 worksheet",
             "due_date": "2026-02-01",
+            "max_marks": 100,
         },
     )
     assert resp.status_code == 201

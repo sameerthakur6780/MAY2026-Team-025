@@ -21,6 +21,7 @@ def serialize_test(test):
         "created_by": test.created_by,
         "creator_name": test.creator.full_name,
         "resource_id": test.resource_id,
+        "max_marks": test.max_marks,
         "created_at": test.created_at.isoformat(),
         "updated_at": test.updated_at.isoformat(),
     }
@@ -58,6 +59,7 @@ def create_test(data, created_by):
         due_date=data["due_date"],
         created_by=created_by,
         resource_id=data.get("resource_id"),
+        max_marks=data["max_marks"],
     )
     db.session.add(test)
     db.session.commit()
@@ -75,7 +77,7 @@ def update_test(test_id, data):
         effective_class_id = data.get("class_id", test.class_id)
         _validate_resource_for_class(data["resource_id"], effective_class_id)
 
-    for field in ("class_id", "subject_id", "title", "description", "due_date", "resource_id"):
+    for field in ("class_id", "subject_id", "title", "description", "due_date", "resource_id", "max_marks"):
         if field in data:
             value = data[field]
             if field == "title" and value:

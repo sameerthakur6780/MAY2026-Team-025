@@ -8,6 +8,7 @@ class TestCreateSchema(Schema):
     description = fields.String(load_default=None, allow_none=True, validate=validate.Length(max=5000))
     due_date = fields.Date(required=True)
     resource_id = fields.Integer(load_default=None, allow_none=True, validate=validate.Range(min=1))
+    max_marks = fields.Integer(required=True, validate=validate.Range(min=1))
 
 
 class TestUpdateSchema(Schema):
@@ -17,3 +18,4 @@ class TestUpdateSchema(Schema):
     description = fields.String(allow_none=True, validate=validate.Length(max=5000))
     due_date = fields.Date()
     resource_id = fields.Integer(allow_none=True, validate=validate.Range(min=1))
+    max_marks = fields.Integer(validate=validate.Range(min=1))
