@@ -52,6 +52,17 @@ class Config:
     FACE_IMAGE_ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png"}
     FACE_MODEL_NAME = os.environ.get("FACE_MODEL_NAME", "VGG-Face")
     FACE_DETECTOR_BACKEND = os.environ.get("FACE_DETECTOR_BACKEND", "opencv")
-    # Cosine similarity in [0, 1]. Tuned empirically against this model.
-    FACE_HIGH_CONFIDENCE_THRESHOLD = float(os.environ.get("FACE_HIGH_CONFIDENCE_THRESHOLD", "0.60"))
+    # Cosine similarity in [0, 1] (VGG-Face, opencv detector). Verified against
+    # a real end-to-end run (3 enrolled students + 1 unenrolled person, see
+    # backend/test_cases.md rows 196-202 and backend/tests/manual_facial_recognition_check.py):
+    # real correct matches scored 0.650-0.803, the highest incorrect match
+    # scored 0.147 -- a 0.503 gap. HIGH was lowered from 0.60 to 0.55 to give
+    # auto-marking more headroom on borderline-but-genuine matches (the
+    # weakest real match, 0.650, only cleared 0.60 by 0.05); this costs
+    # nothing on the false-positive side since 0.55 is still 0.403 above the
+    # highest incorrect score observed. LOW=0.40 already had a wide margin
+    # (0.253) below the real false-positive ceiling and is unchanged.
+    # Small sample (n=3 / n=1 negative) -- re-tune if more real photos surface
+    # different numbers.
+    FACE_HIGH_CONFIDENCE_THRESHOLD = float(os.environ.get("FACE_HIGH_CONFIDENCE_THRESHOLD", "0.55"))
     FACE_LOW_CONFIDENCE_THRESHOLD = float(os.environ.get("FACE_LOW_CONFIDENCE_THRESHOLD", "0.40"))
