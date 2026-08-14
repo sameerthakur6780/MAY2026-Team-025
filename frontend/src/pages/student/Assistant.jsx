@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { STUDENT_NAV } from "@/lib/navConfig";
-import { CHAT_STARTERS, mockAssistantReply } from "@/lib/mockData";
+import { CHAT_STARTERS } from "@/lib/mockData";
+import { api, formatErrorMessage } from "@/lib/apiClient";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,26 +10,34 @@ import { Sparkles, Send, Bot, User } from "lucide-react";
 
 export default function StudentAssistant() {
   const [messages, setMessages] = useState([
-    { role: "assistant", content: "Hi Aarav! I'm your SmartBatch AI assistant. Ask me about homework, tests, timetable or any concept you're stuck on." },
+    { role: "assistant", content: "Hi! I'm your SmartBatch AI assistant. Ask me about homework, tests, timetable or any concept you're stuck on." },
   ]);
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);
+  const [error, setError] = useState("");
   const endRef = useRef(null);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, typing]);
 
-  const send = (text) => {
+  const send = async (text) => {
     const q = (text ?? input).trim();
-    if (!q) return;
+    if (!q || typing) return;
     setMessages(m => [...m, { role: "user", content: q }]);
     setInput("");
+    setError("");
     setTyping(true);
-    setTimeout(() => {
-      setMessages(m => [...m, { role: "assistant", content: mockAssistantReply(q) }]);
+    try {
+      const data = await api.post("/api/assistant/ask", { query: q });
+      setMessages(m => [...m, { role: "assistant", content: data.answer }]);
+    } catch (err) {
+      const message = formatErrorMessage(err.details?.message, err.message || "Could not reach the assistant.");
+      setError(message);
+      setMessages(m => [...m, { role: "assistant", content: message }]);
+    } finally {
       setTyping(false);
-    }, 700);
+    }
   };
 
   return (
@@ -73,6 +82,10 @@ export default function StudentAssistant() {
             <div ref={endRef} />
           </div>
 
+          {error && (
+            <div className="px-6 pb-2 text-xs text-destructive">{error}</div>
+          )}
+
           {messages.length <= 1 && (
             <div className="px-6 pb-4 flex flex-wrap gap-2">
               {CHAT_STARTERS.map((s, i) => (
@@ -86,7 +99,7 @@ export default function StudentAssistant() {
 
           <form onSubmit={e => { e.preventDefault(); send(); }} className="flex items-center gap-3 p-5 border-t border-soft" data-testid="chat-form">
             <Input data-testid="chat-input" value={input} onChange={e => setInput(e.target.value)} placeholder="Ask your doubt…" className="border-soft" />
-            <Button type="submit" data-testid="chat-send-btn" className="bg-coral hover:bg-coral-deep text-ink gap-2 rounded-pill px-5"><Send className="w-4 h-4" /> Send</Button>
+            <Button type="submit" data-testid="chat-send-btn" disabled={typing} className="bg-coral hover:bg-coral-deep text-ink gap-2 rounded-pill px-5"><Send className="w-4 h-4" /> Send</Button>
           </form>
         </CardContent>
       </Card>

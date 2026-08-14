@@ -39,6 +39,7 @@ def create_app(config_class=Config):
     from app.utils import jwt_callbacks  # noqa: F401  registers JWT loader callbacks
 
     from app.routes.analytics import analytics_bp
+    from app.routes.assistant import assistant_bp
     from app.routes.assignments import assignments_bp
     from app.routes.attendance import attendance_bp
     from app.routes.auth import auth_bp
@@ -69,6 +70,7 @@ def create_app(config_class=Config):
     app.register_blueprint(tests_bp)
     app.register_blueprint(test_submissions_bp)
     app.register_blueprint(analytics_bp)
+    app.register_blueprint(assistant_bp)
 
     from app.cli import create_admin
     app.cli.add_command(create_admin)

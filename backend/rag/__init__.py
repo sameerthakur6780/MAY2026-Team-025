@@ -1,0 +1,1 @@
+"""SmartBatch textbook RAG pipeline."""
