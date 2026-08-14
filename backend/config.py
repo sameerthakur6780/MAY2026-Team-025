@@ -66,3 +66,23 @@ class Config:
     # different numbers.
     FACE_HIGH_CONFIDENCE_THRESHOLD = float(os.environ.get("FACE_HIGH_CONFIDENCE_THRESHOLD", "0.55"))
     FACE_LOW_CONFIDENCE_THRESHOLD = float(os.environ.get("FACE_LOW_CONFIDENCE_THRESHOLD", "0.40"))
+
+    # Email (Flask-Mail / SMTP -- see app/services/email.py for the tradeoff
+    # against a transactional provider). Defaults point at Mailtrap-style
+    # local/sandbox SMTP so an unconfigured dev env fails loudly (connection
+    # refused) instead of silently pretending to send.
+    MAIL_SERVER = os.environ.get("MAIL_SERVER", "localhost")
+    MAIL_PORT = int(os.environ.get("MAIL_PORT", "587"))
+    MAIL_USE_TLS = _bool_env("MAIL_USE_TLS", default=True)
+    MAIL_USE_SSL = _bool_env("MAIL_USE_SSL", default=False)
+    MAIL_USERNAME = os.environ.get("MAIL_USERNAME")
+    MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD")
+    MAIL_DEFAULT_SENDER = os.environ.get("MAIL_DEFAULT_SENDER", "SmartBatch <no-reply@smartbatch.test>")
+    # Flask-Mail suppresses real sends whenever TESTING is set (see
+    # flask_mail.Mail.init_mail) -- this only matters outside pytest, e.g. a
+    # local dev server without SMTP creds configured yet.
+    MAIL_SUPPRESS_SEND = _bool_env("MAIL_SUPPRESS_SEND", default=False)
+
+    # Scheduler for NotificationService.schedule(). Off by default in tests
+    # (see tests/conftest.py) so pytest never starts a background thread.
+    SCHEDULER_ENABLED = _bool_env("SCHEDULER_ENABLED", default=True)

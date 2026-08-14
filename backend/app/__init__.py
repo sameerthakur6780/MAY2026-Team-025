@@ -1,7 +1,7 @@
 from flask import Flask, jsonify
 
 from config import Config
-from app.extensions import bcrypt, cors, db, jwt, limiter, migrate
+from app.extensions import bcrypt, cors, db, jwt, limiter, mail, migrate
 
 
 def create_app(config_class=Config):
@@ -12,6 +12,7 @@ def create_app(config_class=Config):
     migrate.init_app(app, db)
     bcrypt.init_app(app)
     jwt.init_app(app)
+    mail.init_app(app)
     cors.init_app(
         app,
         resources={r"/api/*": {"origins": app.config["FRONTEND_ORIGINS"]}},
@@ -71,5 +72,8 @@ def create_app(config_class=Config):
     app.cli.add_command(create_admin)
 
     from app import models  # noqa: F401  registers models with SQLAlchemy metadata
+
+    from app.services.notification_service import init_scheduler
+    init_scheduler(app)
 
     return app

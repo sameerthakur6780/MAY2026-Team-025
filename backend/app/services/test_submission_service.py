@@ -1,3 +1,4 @@
+import logging
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -11,9 +12,12 @@ from app.extensions import db
 from app.models.student import Student
 from app.models.test import Test, TestSubmission
 from app.models.homework import SubmissionStatus
+from app.services.notification_service import NotificationService
 from app.services.storage import get_storage_service
 from app.utils.errors import ApiError, forbidden, not_found
 from app.utils.scoping import current_parent, current_student, current_teacher, teacher_class_ids
+
+logger = logging.getLogger(__name__)
 
 
 def serialize_submission(submission):
@@ -111,6 +115,14 @@ def grade_submission(submission_id, marks, feedback, graded_by):
     submission.graded_by = graded_by
     submission.status = SubmissionStatus.GRADED
     db.session.commit()
+
+    try:
+        NotificationService.notify_marks_published(
+            submission.student, "test", submission.test.title, submission.test.subject.name, marks
+        )
+    except Exception:
+        logger.exception("Failed to send marks_published notification for test submission %s", submission.id)
+
     return submission
 
 

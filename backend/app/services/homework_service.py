@@ -1,11 +1,17 @@
+import logging
+
 from sqlalchemy import false
 
 from app.extensions import db
 from app.models.academic import SchoolClass, Subject
 from app.models.homework import Homework
 from app.models.resource import Resource
+from app.models.student import Student
+from app.services.notification_service import NotificationService
 from app.utils.errors import ApiError, forbidden, not_found
 from app.utils.scoping import current_parent, current_student, current_teacher, teacher_class_ids
+
+logger = logging.getLogger(__name__)
 
 
 def serialize_homework(homework):
@@ -61,6 +67,17 @@ def create_homework(data, created_by):
     )
     db.session.add(homework)
     db.session.commit()
+
+    try:
+        student_ids = [
+            row[0] for row in Student.query.with_entities(Student.id).filter_by(class_id=homework.class_id).all()
+        ]
+        NotificationService.notify_homework_assigned(homework, student_ids)
+    except Exception:
+        # Best-effort -- homework creation already succeeded and committed;
+        # a notification problem must not surface as a failed creation.
+        logger.exception("Failed to schedule homework_assigned notifications for homework %s", homework.id)
+
     return homework
 
 

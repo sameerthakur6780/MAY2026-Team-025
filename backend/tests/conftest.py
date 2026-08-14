@@ -38,6 +38,15 @@ def default_phone():
 
 class TestConfig:
     TESTING = True
+    # Explicit, not just "unset": config.py's load_dotenv() pulls in the
+    # dev .env's FLASK_DEBUG=1 as a process-wide env var, and Flask's own
+    # app.debug falls back to that env var whenever DEBUG isn't set
+    # explicitly here -- without this, tests would inherit debug=True from
+    # whatever the developer's local .env happens to have, which trips
+    # notification_service.py's reloader guard (it treats debug=True as "we
+    # might be the Werkzeug reloader's parent watcher process" and skips
+    # starting the scheduler).
+    DEBUG = False
     SECRET_KEY = "test-secret"
     SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
     SQLALCHEMY_ENGINE_OPTIONS = {
@@ -72,6 +81,10 @@ class TestConfig:
     FACE_DETECTOR_BACKEND = "opencv"
     FACE_HIGH_CONFIDENCE_THRESHOLD = 0.60
     FACE_LOW_CONFIDENCE_THRESHOLD = 0.40
+
+    MAIL_DEFAULT_SENDER = "SmartBatch <no-reply@smartbatch.test>"
+    MAIL_SUPPRESS_SEND = True  # belt-and-suspenders on top of TESTING=True -- never a real SMTP call in tests
+    SCHEDULER_ENABLED = False  # no background thread per test app instance
 
 
 class FakeStorageService:

@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 
 from flask import current_app
@@ -9,8 +10,11 @@ from app.models.academic import SchoolClass
 from app.models.attendance import Attendance, AttendanceMethod, AttendanceStatus
 from app.models.student import Student
 from app.services.facial_recognition import detect_faces, match_embedding
+from app.services.notification_service import NotificationService
 from app.utils.errors import ApiError, forbidden, not_found
 from app.utils.scoping import current_parent, current_student, current_teacher, teacher_class_ids
+
+logger = logging.getLogger(__name__)
 
 
 def serialize_attendance(attendance):
@@ -92,6 +96,16 @@ def bulk_mark_attendance(class_id, date, entries, method, marked_by):
             "conflict",
             409,
         )
+
+    for record in created:
+        if record.status != AttendanceStatus.ABSENT:
+            continue
+        try:
+            NotificationService.notify_attendance_absent(students_by_id[record.student_id], record.date)
+        except Exception:
+            # Notifying is best-effort -- a delivery/lookup problem here must
+            # never undo or fail an attendance mark that already committed.
+            logger.exception("Failed to send attendance_absent notification for student %s", record.student_id)
 
     return created, sorted(existing_student_ids)
 

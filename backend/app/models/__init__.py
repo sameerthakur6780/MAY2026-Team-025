@@ -7,6 +7,7 @@ from app.models.resource import Resource, ResourceType
 from app.models.attendance import Attendance, AttendanceStatus, AttendanceMethod
 from app.models.homework import Homework, Submission, SubmissionStatus
 from app.models.test import Test, TestSubmission
+from app.models.notification import Notification, NotificationType, NotificationStatus
 
 __all__ = [
     "User",
@@ -27,4 +28,7 @@ __all__ = [
     "SubmissionStatus",
     "Test",
     "TestSubmission",
+    "Notification",
+    "NotificationType",
+    "NotificationStatus",
 ]

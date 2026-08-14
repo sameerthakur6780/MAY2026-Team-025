@@ -47,6 +47,7 @@ PASSWORD = "Password123"
 
 class VerifyConfig:
     TESTING = True
+    DEBUG = False  # see the comment on tests/conftest.py's TestConfig.DEBUG
     SECRET_KEY = "verify-secret"
     SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
     SQLALCHEMY_ENGINE_OPTIONS = {"poolclass": StaticPool, "connect_args": {"check_same_thread": False}}
@@ -78,6 +79,10 @@ class VerifyConfig:
     FACE_DETECTOR_BACKEND = "opencv"
     FACE_HIGH_CONFIDENCE_THRESHOLD = 0.60
     FACE_LOW_CONFIDENCE_THRESHOLD = 0.40
+
+    MAIL_DEFAULT_SENDER = "SmartBatch <no-reply@smartbatch.test>"
+    MAIL_SUPPRESS_SEND = True
+    SCHEDULER_ENABLED = False
 
 
 class FakeStorageService:
