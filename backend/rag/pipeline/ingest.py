@@ -7,7 +7,6 @@ from rag.embedding.gemini_embedder import embed_texts
 from rag.extraction.pdf_extractor import extract_pdf
 from rag.schemas import IngestResult
 from rag.store.supabase_store import (
-    RagStoreError,
     create_book,
     delete_book_chunks,
     get_book_by_hash,
@@ -29,7 +28,8 @@ def ingest_pdf_bytes(
         return IngestResult(message="No indexable content extracted")
 
     existing = get_book_by_hash(extracted.pdf_hash)
-    if existing and not force:
+    existing_chunk_count = int(existing.get("chunk_count") or 0) if existing else 0
+    if existing and not force and existing_chunk_count > 0:
         return IngestResult(
             book_id=existing["id"],
             pdf_hash=extracted.pdf_hash,
@@ -37,7 +37,7 @@ def ingest_pdf_bytes(
             message="PDF unchanged; skipped re-indexing",
         )
 
-    if existing and force:
+    if existing:
         delete_book_chunks(existing["id"])
         book_id = existing["id"]
     else:
@@ -86,10 +86,3 @@ def ingest_pdf_file(
         resource_id=resource_id,
         force=force,
     )
-
-
-def ingest_or_raise(**kwargs) -> IngestResult:
-    try:
-        return ingest_pdf_bytes(**kwargs)
-    except RagStoreError as exc:
-        raise RuntimeError(str(exc)) from exc

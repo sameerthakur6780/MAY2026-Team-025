@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from typing import Any
+from urllib.parse import urlparse
 from uuid import uuid4
 
 import psycopg2
@@ -17,12 +18,30 @@ class RagStoreError(RuntimeError):
     pass
 
 
+_GROUNDING_CONTENT_FILTER = "c.content_type NOT IN ('reference', 'exercise')"
+
+
+def _connection_error_message(database_url: str, exc: Exception) -> str:
+    host = urlparse(database_url).hostname or "configured host"
+    message = f"Could not connect to RAG database host '{host}': {exc}"
+    if host.startswith("db.") and host.endswith(".supabase.co"):
+        message += (
+            " Supabase direct database hosts are IPv6-only for many projects. "
+            "Use the Supabase pooler URI from Project Settings > Database > "
+            "Connection string for RAG_DATABASE_URL instead."
+        )
+    return message
+
+
 @contextmanager
 def _connection():
     cfg = get_rag_config()
     if not cfg.database_url:
         raise RagStoreError("RAG_DATABASE_URL is not configured")
-    conn = psycopg2.connect(cfg.database_url)
+    try:
+        conn = psycopg2.connect(cfg.database_url)
+    except psycopg2.OperationalError as exc:
+        raise RagStoreError(_connection_error_message(cfg.database_url, exc)) from exc
     try:
         yield conn
         conn.commit()
@@ -42,8 +61,18 @@ def get_book_by_hash(pdf_hash: str) -> dict[str, Any] | None:
         with conn.cursor(cursor_factory=extras.RealDictCursor) as cursor:
             cursor.execute(
                 """
-                SELECT id::text AS id, pdf_hash, title, subject, grade, resource_id
-                FROM rag_books WHERE pdf_hash = %s
+                SELECT
+                    b.id::text AS id,
+                    b.pdf_hash,
+                    b.title,
+                    b.subject,
+                    b.grade,
+                    b.resource_id,
+                    COUNT(c.id) AS chunk_count
+                FROM rag_books b
+                LEFT JOIN rag_chunks c ON c.book_id = b.id
+                WHERE b.pdf_hash = %s
+                GROUP BY b.id
                 """,
                 (pdf_hash,),
             )
@@ -156,7 +185,7 @@ def hybrid_search(
     chapter: str | None = None,
 ) -> list[dict[str, Any]]:
     cfg = get_rag_config()
-    filter_sql = "c.grade = %s AND c.subject = %s AND c.content_type != 'reference'"
+    filter_sql = f"c.grade = %s AND c.subject = %s AND {_GROUNDING_CONTENT_FILTER}"
     filter_params: list[Any] = [grade, subject]
     if chapter:
         filter_sql += " AND c.chapter ILIKE %s"
@@ -227,12 +256,59 @@ def hybrid_search(
         *filter_params,
         vector_literal,
         limit,
+        query_text,
         *filter_params,
         query_text,
         query_text,
+        limit,
+        limit,
+    ]
+
+    with _connection() as conn:
+        with conn.cursor(cursor_factory=extras.RealDictCursor) as cursor:
+            cursor.execute(sql, params)
+            rows = cursor.fetchall()
+            return [dict(row) for row in rows]
+
+
+def keyword_search(
+    query_text: str,
+    *,
+    grade: int,
+    subject: str,
+    chapter: str | None = None,
+) -> list[dict[str, Any]]:
+    cfg = get_rag_config()
+    filter_sql = f"c.grade = %s AND c.subject = %s AND {_GROUNDING_CONTENT_FILTER}"
+    filter_params: list[Any] = [grade, subject]
+    if chapter:
+        filter_sql += " AND c.chapter ILIKE %s"
+        filter_params.append(f"%{chapter.strip()}%")
+
+    sql = f"""
+    SELECT
+        c.id::text AS chunk_id,
+        c.content,
+        c.content_type,
+        c.chapter,
+        c.section,
+        c.page_range,
+        c.book_id::text AS book_id,
+        p.full_text AS parent_text,
+        ts_rank_cd(c.search_vector, plainto_tsquery('english', %s)) AS keyword_score
+    FROM rag_chunks c
+    JOIN rag_parent_sections p ON p.id = c.parent_section_id
+    WHERE {filter_sql}
+      AND c.search_vector @@ plainto_tsquery('english', %s)
+    ORDER BY keyword_score DESC
+    LIMIT %s
+    """
+
+    params = [
         query_text,
-        limit,
-        limit,
+        *filter_params,
+        query_text,
+        cfg.retrieval_top_k,
     ]
 
     with _connection() as conn:

@@ -10,10 +10,22 @@ from rag.config import get_rag_config
 from rag.schemas import ChunkRecord, ContentType, ExtractedBlock
 
 TOKEN_APPROX = 1.3
+SENTENCE_END = re.compile(r"(?<=[.!?])\s+")
 
 
 def _token_count(text: str) -> int:
     return max(1, int(len(re.findall(r"\S+", text)) * TOKEN_APPROX))
+
+
+def _find_sentence_boundary_end(text: str, max_chars: int) -> int:
+    if len(text) <= max_chars:
+        return len(text)
+    window = text[:max_chars]
+    matches = list(SENTENCE_END.finditer(window))
+    if matches:
+        return matches[-1].end()
+    last_space = window.rfind(" ")
+    return last_space if last_space > max_chars // 2 else max_chars
 
 
 def _split_tokens(text: str, max_tokens: int, overlap_ratio: float) -> list[str]:
@@ -28,12 +40,19 @@ def _split_tokens(text: str, max_tokens: int, overlap_ratio: float) -> list[str]
     chunks: list[str] = []
     start = 0
     while start < len(words):
-        end = min(len(words), start + max_words)
-        chunks.append(" ".join(words[start:end]))
+        candidate = " ".join(words[start : start + max_words])
+        end = start + max_words
+        if end < len(words):
+            boundary = _find_sentence_boundary_end(candidate, len(candidate))
+            if boundary > len(candidate) // 2:
+                candidate = candidate[:boundary].rstrip()
+                boundary_words = len(candidate.split())
+                end = start + max(1, boundary_words)
+        chunks.append(candidate.strip())
         if end >= len(words):
             break
         start = max(start + 1, end - overlap_words)
-    return chunks
+    return [chunk for chunk in chunks if chunk]
 
 
 def _section_key(block: ExtractedBlock) -> tuple[str, str, str]:
@@ -53,7 +72,7 @@ def chunk_blocks(
 ) -> list[ChunkRecord]:
     cfg = get_rag_config()
     grouped: dict[tuple[str, str, str], list[ExtractedBlock]] = defaultdict(list)
-    for block in sorted(blocks, key=lambda item: (item.page, item.text[:40])):
+    for block in blocks:
         if block.content_type == "reference":
             continue
         grouped[_section_key(block)].append(block)

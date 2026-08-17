@@ -16,6 +16,7 @@ numpy==2.5.1
 Flask-Mail==0.10.0
 APScheduler==3.11.3
 PyMuPDF==1.25.5
+pymupdf4llm>=0.0.17
 pdfplumber==0.11.6
 litellm==1.68.0
 psycopg2-binary==2.9.10

@@ -35,13 +35,19 @@ class Config:
     JWT_COOKIE_SECURE = _bool_env("JWT_COOKIE_SECURE", default=True)
     JWT_COOKIE_SAMESITE = os.environ.get("JWT_COOKIE_SAMESITE", "Lax")
     JWT_COOKIE_CSRF_PROTECT = True
-    JWT_ACCESS_TOKEN_EXPIRES = timedelta(minutes=15)
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=24)
     JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)
     JWT_REFRESH_COOKIE_PATH = "/api/auth/refresh"
 
     SUPABASE_URL = os.environ.get("PROJECT_URL")
+    DB_PASSWORD = os.environ.get("DB_PASSWORD")
+    SUPABASE_DB_POOLER_HOST = os.environ.get("SUPABASE_DB_POOLER_HOST")
+    SUPABASE_DB_REGION = os.environ.get("SUPABASE_DB_REGION")
     SUPABASE_SERVICE_ROLE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
     SUPABASE_BUCKET_NAME = os.environ.get("SUPABASE_BUCKET_NAME", "secure-uploads")
+    REDIS_URL = os.environ.get("REDIS_URL")
+    UPSTASH_REDIS_REST_URL = os.environ.get("UPSTASH_REDIS_REST_URL")
+    UPSTASH_REDIS_REST_TOKEN = os.environ.get("UPSTASH_REDIS_REST_TOKEN")
 
     MAX_UPLOAD_SIZE_BYTES = 20 * 1024 * 1024
     ALLOWED_UPLOAD_EXTENSIONS = {"pdf", "jpg", "jpeg", "png", "doc", "docx", "txt"}

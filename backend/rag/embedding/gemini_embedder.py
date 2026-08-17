@@ -27,7 +27,7 @@ def embed_texts(texts: Sequence[str]) -> list[list[float]]:
     vectors: list[list[float]] = []
     for start in range(0, len(texts), BATCH_SIZE):
         batch = list(texts[start : start + BATCH_SIZE])
-        response = litellm.embedding(model=cfg.embedding_model, input=batch)
+        response = litellm.embedding(model=cfg.embedding_model, input=batch, dimensions=cfg.embedding_dimensions)
         batch_vectors = [item["embedding"] for item in response.data]
         vectors.extend(batch_vectors)
     return vectors

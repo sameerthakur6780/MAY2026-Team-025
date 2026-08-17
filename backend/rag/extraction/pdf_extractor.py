@@ -1,19 +1,22 @@
-"""Layout-aware PDF extraction with header/footer stripping and content tagging."""
+"""Layout-aware PDF extraction via pymupdf4llm with content tagging."""
 
 from __future__ import annotations
 
 import hashlib
 import re
-from collections import Counter
 from dataclasses import dataclass, field
 from io import BytesIO
 
 import fitz
 import pdfplumber
+import pymupdf4llm
+from pdfplumber.utils.exceptions import PdfminerException
 
 from rag.schemas import ContentType, ExtractedBlock
 
 FIGURE_PATTERN = re.compile(r"^(figure|fig\.?)\s+\d", re.IGNORECASE)
+HEADING_PATTERN = re.compile(r"^(#{1,6})\s+(.+)$")
+NUMBERED_LIST_LINE = re.compile(r"^\d+\.\s+\S")
 REFERENCE_KEYWORDS = (
     "table of contents",
     "contents",
@@ -32,7 +35,6 @@ EXERCISE_KEYWORDS = (
     "short answer",
     "objective questions",
 )
-HEADER_FOOTER_BAND = 0.08
 
 
 @dataclass
@@ -46,41 +48,38 @@ def hash_pdf_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
-def _approx_tokens(text: str) -> int:
-    return max(1, int(len(text.split()) * 1.3))
+def collapse_repeated_tokens(text: str, *, min_run: int = 3) -> str:
+    """Collapse decorative repeated tokens such as 'TOMS TOMS TOMS'."""
+    tokens = text.split()
+    if not tokens:
+        return text
+
+    collapsed: list[str] = []
+    index = 0
+    while index < len(tokens):
+        end = index + 1
+        while end < len(tokens) and tokens[end].casefold() == tokens[index].casefold():
+            end += 1
+        run_length = end - index
+        collapsed.append(tokens[index])
+        index = end if run_length >= min_run else index + 1
+    return " ".join(collapsed)
 
 
-def _detect_repeated_edge_lines(doc: fitz.Document) -> set[str]:
-    """Headers/footers repeat at similar y-positions across pages."""
-    top_lines: Counter[str] = Counter()
-    bottom_lines: Counter[str] = Counter()
-    page_count = max(len(doc), 1)
-    threshold = max(2, int(page_count * 0.08))
+def is_numbered_list(text: str) -> bool:
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    if len(lines) < 2:
+        return False
+    numbered = sum(1 for line in lines if NUMBERED_LIST_LINE.match(line))
+    return numbered / len(lines) >= 0.6
 
-    for page in doc:
-        height = page.rect.height
-        blocks = page.get_text("dict", flags=fitz.TEXTFLAGS_TEXT)["blocks"]
-        for block in blocks:
-            if block.get("type") != 0:
-                continue
-            text = " ".join(
-                span["text"].strip()
-                for line in block.get("lines", [])
-                for span in line.get("spans", [])
-            ).strip()
-            if not text:
-                continue
-            y0 = block["bbox"][1]
-            y1 = block["bbox"][3]
-            if y0 <= height * HEADER_FOOTER_BAND:
-                top_lines[text] += 1
-            if y1 >= height * (1 - HEADER_FOOTER_BAND):
-                bottom_lines[text] += 1
 
-    noise = set()
-    for counter in (top_lines, bottom_lines):
-        noise.update(text for text, count in counter.items() if count >= threshold)
-    return noise
+def is_gfm_table(text: str) -> bool:
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    if len(lines) < 2:
+        return False
+    pipe_lines = sum(1 for line in lines if line.count("|") >= 2)
+    return pipe_lines >= 2
 
 
 def _classify_section_heading(text: str) -> ContentType | None:
@@ -95,6 +94,10 @@ def _classify_section_heading(text: str) -> ContentType | None:
 def _classify_block(text: str, section_type: ContentType | None) -> ContentType:
     if section_type == "reference":
         return "reference"
+    if is_gfm_table(text):
+        return "table"
+    if is_numbered_list(text):
+        return "exercise"
     if FIGURE_PATTERN.match(text.strip()):
         return "figure_caption"
     lowered = text.lower().strip()
@@ -103,40 +106,138 @@ def _classify_block(text: str, section_type: ContentType | None) -> ContentType:
     return "explanation"
 
 
-def _extract_tables(pdf_bytes: bytes) -> list[ExtractedBlock]:
+def _normalize_block_text(text: str) -> str:
+    cleaned = re.sub(r"\n{3,}", "\n\n", text.strip())
+    cleaned = re.sub(r"[ \t]+", " ", cleaned)
+    return collapse_repeated_tokens(cleaned)
+
+
+def _split_markdown_paragraphs(markdown: str) -> list[str]:
+    parts: list[str] = []
+    buffer: list[str] = []
+    for line in markdown.splitlines():
+        if not line.strip():
+            if buffer:
+                parts.append("\n".join(buffer).strip())
+                buffer = []
+            continue
+        buffer.append(line.rstrip())
+    if buffer:
+        parts.append("\n".join(buffer).strip())
+    return [part for part in parts if part]
+
+
+def _extract_tables_fallback(
+    pdf_bytes: bytes,
+    *,
+    chapter: str,
+    section: str,
+) -> list[ExtractedBlock]:
     blocks: list[ExtractedBlock] = []
-    with pdfplumber.open(BytesIO(pdf_bytes)) as pdf:
+    try:
+        pdf = pdfplumber.open(BytesIO(pdf_bytes))
+    except PdfminerException:
+        return blocks
+
+    with pdf:
         for page_num, page in enumerate(pdf.pages, start=1):
-            tables = page.extract_tables() or []
+            try:
+                tables = page.extract_tables() or []
+            except PdfminerException:
+                continue
             for table in tables:
                 rows = [" | ".join(cell or "" for cell in row) for row in table if row]
-                text = "\n".join(rows).strip()
+                text = _normalize_block_text("\n".join(rows))
                 if text:
                     blocks.append(
-                        ExtractedBlock(text=text, content_type="table", page=page_num)
+                        ExtractedBlock(
+                            text=text,
+                            content_type="table",
+                            page=page_num,
+                            chapter=chapter,
+                            section=section,
+                        )
                     )
     return blocks
 
 
-def _reading_order_blocks(page: fitz.Page, noise_lines: set[str]) -> list[tuple[float, float, str]]:
-    """Return (y0, x0, text) tuples sorted for multi-column reading order."""
-    items: list[tuple[float, float, str]] = []
-    blocks = page.get_text("dict", flags=fitz.TEXTFLAGS_TEXT)["blocks"]
-    for block in blocks:
-        if block.get("type") != 0:
-            continue
-        text = " ".join(
-            span["text"].strip()
-            for line in block.get("lines", [])
-            for span in line.get("spans", [])
-        ).strip()
-        if not text or text in noise_lines:
-            continue
-        x0 = block["bbox"][0]
-        y0 = block["bbox"][1]
-        items.append((y0, x0, text))
-    items.sort(key=lambda item: (round(item[0], 1), item[1]))
-    return items
+def _page_number_from_chunk(chunk: dict, fallback: int) -> int:
+    metadata = chunk.get("metadata") or {}
+    for key in ("page", "page_number"):
+        value = chunk.get(key, metadata.get(key))
+        if isinstance(value, int):
+            return value + 1 if key == "page" and value >= 0 else value
+    return fallback
+
+
+def _header_info(doc: fitz.Document):
+    try:
+        if hasattr(pymupdf4llm, "TocHeaders"):
+            return pymupdf4llm.TocHeaders(doc)
+    except Exception:
+        pass
+    try:
+        if hasattr(pymupdf4llm, "IdentifyHeaders"):
+            return pymupdf4llm.IdentifyHeaders(doc)
+    except Exception:
+        pass
+    return None
+
+
+def _markdown_page_chunks(doc: fitz.Document) -> list[dict]:
+    if getattr(pymupdf4llm, "_use_layout", False):
+        return pymupdf4llm.to_markdown(
+            doc,
+            page_chunks=True,
+            header=False,
+            footer=False,
+        )
+
+    kwargs: dict = {
+        "page_chunks": True,
+        "table_strategy": "lines_strict",
+    }
+    hdr_info = _header_info(doc)
+    if hdr_info is not None:
+        kwargs["hdr_info"] = hdr_info
+    return pymupdf4llm.to_markdown(doc, **kwargs)
+
+
+def _blocks_from_markdown_pages(page_chunks: list[dict]) -> list[ExtractedBlock]:
+    blocks: list[ExtractedBlock] = []
+    current_chapter = ""
+    current_section = ""
+    active_section_type: ContentType | None = None
+
+    for page_index, chunk in enumerate(page_chunks, start=1):
+        page_num = _page_number_from_chunk(chunk, page_index)
+        markdown = chunk.get("text") or chunk.get("markdown") or ""
+        for part in _split_markdown_paragraphs(markdown):
+            heading_match = HEADING_PATTERN.match(part)
+            if heading_match:
+                level = len(heading_match.group(1))
+                heading_text = heading_match.group(2).strip()
+                if level == 1:
+                    current_chapter = heading_text
+                    current_section = ""
+                elif level >= 2:
+                    current_section = heading_text
+                active_section_type = _classify_section_heading(current_section or current_chapter)
+                continue
+
+            text = _normalize_block_text(part)
+            if not text:
+                continue
+            blocks.append(
+                ExtractedBlock(
+                    text=text,
+                    content_type=_classify_block(text, active_section_type),
+                    page=page_num,
+                    chapter=current_chapter,
+                    section=current_section,
+                )
+            )
+    return blocks
 
 
 def extract_pdf(pdf_bytes: bytes, title: str = "") -> ExtractionResult:
@@ -144,49 +245,24 @@ def extract_pdf(pdf_bytes: bytes, title: str = "") -> ExtractionResult:
     try:
         meta = doc.metadata or {}
         resolved_title = title or meta.get("title") or "Untitled"
-        noise_lines = _detect_repeated_edge_lines(doc)
+        page_chunks = _markdown_page_chunks(doc)
+        blocks = _blocks_from_markdown_pages(page_chunks)
 
-        outline_by_page: dict[int, tuple[str, str]] = {}
-        current_chapter = ""
-        current_section = ""
-        try:
-            toc = doc.get_toc(simple=True) or []
-            for level, heading, page_num in toc:
-                heading = heading.strip()
-                if level == 1:
-                    current_chapter = heading
-                    current_section = ""
-                elif level >= 2:
-                    current_section = heading
-                outline_by_page[page_num] = (current_chapter, current_section)
-        except Exception:
-            outline_by_page = {}
+        last_chapter = blocks[-1].chapter if blocks else ""
+        last_section = blocks[-1].section if blocks else ""
+        fallback_tables = _extract_tables_fallback(
+            pdf_bytes,
+            chapter=last_chapter,
+            section=last_section,
+        )
+        existing_table_keys = {
+            re.sub(r"\s+", " ", block.text.strip().lower()) for block in blocks if block.content_type == "table"
+        }
+        for table_block in fallback_tables:
+            key = re.sub(r"\s+", " ", table_block.text.strip().lower())
+            if key not in existing_table_keys:
+                blocks.append(table_block)
 
-        blocks: list[ExtractedBlock] = []
-        active_section_type: ContentType | None = None
-        prev_page = 0
-
-        for page_index, page in enumerate(doc, start=1):
-            if page_index in outline_by_page:
-                current_chapter, current_section = outline_by_page[page_index]
-                active_section_type = _classify_section_heading(current_section or current_chapter)
-
-            ordered = _reading_order_blocks(page, noise_lines)
-            for _y0, _x0, text in ordered:
-                content_type = _classify_block(text, active_section_type)
-                blocks.append(
-                    ExtractedBlock(
-                        text=text,
-                        content_type=content_type,
-                        page=page_index,
-                        chapter=current_chapter,
-                        section=current_section,
-                    )
-                )
-            prev_page = page_index
-
-        blocks.extend(_extract_tables(pdf_bytes))
-        blocks.sort(key=lambda block: (block.page, block.text[:40]))
         return ExtractionResult(
             blocks=blocks,
             pdf_hash=hash_pdf_bytes(pdf_bytes),

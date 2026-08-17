@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+import logging
+
 from rag.cache.redis_cache import get_cached_answer, set_cached_answer
 from rag.config import get_rag_config
 from rag.embedding.gemini_embedder import embed_query
 from rag.generation.answer_generator import generate_answer, rewrite_query
 from rag.schemas import QueryRequest, QueryResponse, RagAnswer
-from rag.store.supabase_store import RagStoreError, hybrid_search
+from rag.store.supabase_store import RagStoreError, hybrid_search, keyword_search
+
+logger = logging.getLogger(__name__)
 
 
 def answer_question(request: QueryRequest) -> QueryResponse:
@@ -21,7 +25,12 @@ def answer_question(request: QueryRequest) -> QueryResponse:
             model_used="none",
         )
 
-    cached = get_cached_answer(request.query, grade=request.grade, subject=request.subject)
+    cached = get_cached_answer(
+        request.query,
+        grade=request.grade,
+        subject=request.subject,
+        chapter=request.chapter,
+    )
     if cached:
         return QueryResponse(
             answer=cached.answer,
@@ -32,15 +41,46 @@ def answer_question(request: QueryRequest) -> QueryResponse:
         )
 
     try:
-        rewritten, rewrite_model = rewrite_query(request.query)
-        query_embedding = embed_query(rewritten)
-        hits = hybrid_search(
-            query_embedding,
-            rewritten,
-            grade=request.grade,
-            subject=request.subject,
-            chapter=request.chapter,
-        )
+        if cfg.rewrite_enabled:
+            rewritten, rewrite_model = rewrite_query(request.query)
+        else:
+            rewritten = request.query.strip()
+            rewrite_model = "none"
+        try:
+            query_embedding = embed_query(rewritten)
+        except Exception as exc:
+            logger.warning("Query embedding failed; falling back to keyword search: %s", exc)
+            query_embedding = None
+
+        if query_embedding is None:
+            hits = keyword_search(
+                rewritten,
+                grade=request.grade,
+                subject=request.subject,
+                chapter=request.chapter,
+            )
+        else:
+            hits = hybrid_search(
+                query_embedding,
+                rewritten,
+                grade=request.grade,
+                subject=request.subject,
+                chapter=request.chapter,
+            )
+        if not hits and request.chapter:
+            if query_embedding is None:
+                hits = keyword_search(
+                    rewritten,
+                    grade=request.grade,
+                    subject=request.subject,
+                )
+            else:
+                hits = hybrid_search(
+                    query_embedding,
+                    rewritten,
+                    grade=request.grade,
+                    subject=request.subject,
+                )
         rag_answer = generate_answer(
             request.query,
             hits,
@@ -50,7 +90,13 @@ def answer_question(request: QueryRequest) -> QueryResponse:
         rag_answer.rewritten_query = rewritten
         if rag_answer.model_used == "none":
             rag_answer.model_used = rewrite_model
-        set_cached_answer(request.query, rag_answer, grade=request.grade, subject=request.subject)
+        set_cached_answer(
+            request.query,
+            rag_answer,
+            grade=request.grade,
+            subject=request.subject,
+            chapter=request.chapter,
+        )
         return QueryResponse(
             answer=rag_answer.answer,
             citations=rag_answer.citations,

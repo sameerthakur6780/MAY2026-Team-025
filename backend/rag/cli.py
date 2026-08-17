@@ -13,16 +13,21 @@ sys.path.insert(0, str(BACKEND_ROOT))
 from rag.pipeline.ingest import ingest_pdf_file
 from rag.pipeline.query import answer_question
 from rag.schemas import QueryRequest
+from rag.store.supabase_store import RagStoreError
 
 
 def cmd_ingest(args: argparse.Namespace) -> int:
-    result = ingest_pdf_file(
-        str(args.pdf),
-        subject=args.subject,
-        grade=args.grade,
-        title=args.title,
-        force=args.force,
-    )
+    try:
+        result = ingest_pdf_file(
+            str(args.pdf),
+            subject=args.subject,
+            grade=args.grade,
+            title=args.title,
+            force=args.force,
+        )
+    except RagStoreError as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
     print(json.dumps(result.model_dump(), indent=2))
     return 0
 
