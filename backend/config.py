@@ -11,6 +11,13 @@ load_dotenv(os.path.join(BASE_DIR, ".env"))
 
 
 DEFAULT_DB_PATH = os.path.join(BASE_DIR, "instance", "smartbatch.db")
+# instance/ is gitignored (only *.db is meant to be excluded, but git never
+# tracks an otherwise-empty directory) -- a fresh clone/deploy has no
+# instance/ folder at all, so sqlite3 fails with "unable to open database
+# file" before it ever gets to create the .db file itself. Safe to call
+# unconditionally: this only matters for the SQLite fallback path below: a
+# real DATABASE_URL (Postgres) never touches this directory.
+os.makedirs(os.path.dirname(DEFAULT_DB_PATH), exist_ok=True)
 
 
 def _bool_env(name, default=False):
