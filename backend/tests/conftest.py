@@ -86,6 +86,12 @@ class TestConfig:
     MAIL_SUPPRESS_SEND = True  # belt-and-suspenders on top of TESTING=True -- never a real SMTP call in tests
     SCHEDULER_ENABLED = False  # no background thread per test app instance
 
+    RAZORPAY_KEY_ID = "test-key-id"
+    RAZORPAY_KEY_SECRET = "test-key-secret"
+    RAZORPAY_WEBHOOK_SECRET = "test-webhook-secret"
+    FEE_GENERATION_DAY_OF_MONTH = 25
+    FEE_DUE_DAY_OF_MONTH = 10
+
 
 class FakeStorageService:
     """In-memory stand-in for SupabaseStorageService. No network I/O."""

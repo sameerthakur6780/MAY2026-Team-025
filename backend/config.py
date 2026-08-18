@@ -86,3 +86,21 @@ class Config:
     # Scheduler for NotificationService.schedule(). Off by default in tests
     # (see tests/conftest.py) so pytest never starts a background thread.
     SCHEDULER_ENABLED = _bool_env("SCHEDULER_ENABLED", default=True)
+
+    # Razorpay (see app/services/razorpay_service.py for why this is plain
+    # `requests` calls rather than the razorpay PyPI package). KEY_SECRET
+    # signs API requests (create_order); WEBHOOK_SECRET is a *separate*
+    # secret configured in the Razorpay dashboard's webhook settings, used
+    # only to verify inbound webhook signatures -- never send it anywhere.
+    RAZORPAY_KEY_ID = os.environ.get("RAZORPAY_KEY_ID", "")
+    RAZORPAY_KEY_SECRET = os.environ.get("RAZORPAY_KEY_SECRET", "")
+    RAZORPAY_WEBHOOK_SECRET = os.environ.get("RAZORPAY_WEBHOOK_SECRET", "")
+
+    # Fee generation: FEE_GENERATION_DAY_OF_MONTH is when the "create next
+    # month's StudentFee for every active FeePlan" job runs (a few days
+    # before the next cycle starts); FEE_DUE_DAY_OF_MONTH is which day of
+    # that cycle's month the fee is due on (clamped to the month's actual
+    # length, e.g. day 31 in February). Both exist as env vars only so a
+    # deployment can tune the billing calendar without a code change.
+    FEE_GENERATION_DAY_OF_MONTH = int(os.environ.get("FEE_GENERATION_DAY_OF_MONTH", "25"))
+    FEE_DUE_DAY_OF_MONTH = int(os.environ.get("FEE_DUE_DAY_OF_MONTH", "10"))

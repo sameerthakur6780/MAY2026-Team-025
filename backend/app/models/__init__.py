@@ -8,6 +8,7 @@ from app.models.attendance import Attendance, AttendanceStatus, AttendanceMethod
 from app.models.homework import Homework, Submission, SubmissionStatus
 from app.models.test import Test, TestSubmission
 from app.models.notification import Notification, NotificationType, NotificationStatus
+from app.models.fee import FeePlan, StudentFee, FeeStatus
 
 __all__ = [
     "User",
@@ -31,4 +32,7 @@ __all__ = [
     "Notification",
     "NotificationType",
     "NotificationStatus",
+    "FeePlan",
+    "StudentFee",
+    "FeeStatus",
 ]

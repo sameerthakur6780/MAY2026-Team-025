@@ -43,10 +43,13 @@ def create_app(config_class=Config):
     from app.routes.attendance import attendance_bp
     from app.routes.auth import auth_bp
     from app.routes.classes import classes_bp
+    from app.routes.fee_plans import fee_plans_bp
+    from app.routes.fees import fees_bp
     from app.routes.health import health_bp
     from app.routes.homework import homework_bp
     from app.routes.homework_submissions import homework_submissions_bp
     from app.routes.parents import parents_bp
+    from app.routes.payments import payments_bp
     from app.routes.resources import resources_bp
     from app.routes.students import students_bp
     from app.routes.subjects import subjects_bp
@@ -69,6 +72,9 @@ def create_app(config_class=Config):
     app.register_blueprint(tests_bp)
     app.register_blueprint(test_submissions_bp)
     app.register_blueprint(analytics_bp)
+    app.register_blueprint(fee_plans_bp)
+    app.register_blueprint(fees_bp)
+    app.register_blueprint(payments_bp)
 
     from app.cli import create_admin
     app.cli.add_command(create_admin)
@@ -77,5 +83,8 @@ def create_app(config_class=Config):
 
     from app.services.notification_service import init_scheduler
     init_scheduler(app)
+
+    from app.services.fee_service import init_fee_scheduler
+    init_fee_scheduler(app)
 
     return app
