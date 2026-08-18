@@ -8,8 +8,9 @@ class EmailService(ABC):
     interface, not touching notification_service.py."""
 
     @abstractmethod
-    def send(self, to_email, subject, body):
-        """Sends a plain-text email. Raises EmailSendError on failure."""
+    def send(self, to_email, subject, body, html_body=None):
+        """Sends an email with a plain-text `body`, plus an optional HTML
+        alternative (`html_body`). Raises EmailSendError on failure."""
 
 
 class EmailSendError(Exception):

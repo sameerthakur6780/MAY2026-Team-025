@@ -1,7 +1,10 @@
+import logging
 import os
 from datetime import timedelta
 
 from dotenv import load_dotenv
+
+logger = logging.getLogger(__name__)
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 load_dotenv(os.path.join(BASE_DIR, ".env"))
@@ -17,11 +20,38 @@ def _bool_env(name, default=False):
     return val.strip().lower() in ("1", "true", "yes", "on")
 
 
+def _require_env(name):
+    """For secrets where a hardcoded fallback would be an actual security
+    hole (e.g. every deployment silently signing sessions/JWTs with the same
+    known "dev" string until someone notices). Raises at import time --
+    loudly, at startup, in the deploy log -- rather than booting into a
+    silently-insecure state. Render (and any other host) must set these via
+    its dashboard/environment, not this file; backend/.env covers local dev
+    (see .env.example)."""
+    value = os.environ.get(name)
+    if not value:
+        raise RuntimeError(
+            f"{name} is not set. This must be provided via environment variable -- there is no "
+            f"default, because the only alternative would be an insecure hardcoded value. Set it in "
+            f"Render's dashboard (Environment tab) for deployed environments, or in backend/.env locally."
+        )
+    return value
+
+
 class Config:
-    SECRET_KEY = os.environ.get("SECRET_KEY", "dev")
+    SECRET_KEY = _require_env("SECRET_KEY")
+    # Render's disk is ephemeral (wiped on every redeploy/restart) -- that's
+    # fine here since scripts/seed_demo_data.py is meant to be re-run after
+    # every restart anyway. DATABASE_URL overrides this with a real
+    # connection string (e.g. a managed Postgres) if one is ever added.
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL") or "sqlite:///" + DEFAULT_DB_PATH
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
+    # Comma-separated list of allowed browser origins for the frontend.
+    # Local dev falls back to the Vite/CRA defaults below; Render's
+    # dashboard should set this to the deployed Vercel URL once it exists
+    # (e.g. "https://your-app.vercel.app"), comma-separated with any others
+    # that need access (a Vercel preview URL, a second environment, etc.).
     FRONTEND_ORIGINS = [
         origin.strip()
         for origin in os.environ.get("FRONTEND_ORIGIN", "http://localhost:3000,http://localhost:5173").split(",")
@@ -30,7 +60,7 @@ class Config:
 
     RATELIMIT_STORAGE_URI = os.environ.get("RATELIMIT_STORAGE_URI", "memory://")
 
-    JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "dev-jwt-secret-change-me")
+    JWT_SECRET_KEY = _require_env("JWT_SECRET_KEY")
     JWT_TOKEN_LOCATION = ["cookies"]
     JWT_COOKIE_SECURE = _bool_env("JWT_COOKIE_SECURE", default=True)
     JWT_COOKIE_SAMESITE = os.environ.get("JWT_COOKIE_SAMESITE", "Lax")
@@ -39,7 +69,11 @@ class Config:
     JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)
     JWT_REFRESH_COOKIE_PATH = "/api/auth/refresh"
 
-    SUPABASE_URL = os.environ.get("PROJECT_URL")
+    # SUPABASE_URL is the current/preferred name; PROJECT_URL is kept as a
+    # fallback only because it's what this project's existing .env already
+    # uses -- set SUPABASE_URL on Render for a name that actually matches
+    # the other two SUPABASE_* vars.
+    SUPABASE_URL = os.environ.get("SUPABASE_URL") or os.environ.get("PROJECT_URL")
     SUPABASE_SERVICE_ROLE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
     SUPABASE_BUCKET_NAME = os.environ.get("SUPABASE_BUCKET_NAME", "secure-uploads")
 
@@ -104,3 +138,35 @@ class Config:
     # deployment can tune the billing calendar without a code change.
     FEE_GENERATION_DAY_OF_MONTH = int(os.environ.get("FEE_GENERATION_DAY_OF_MONTH", "25"))
     FEE_DUE_DAY_OF_MONTH = int(os.environ.get("FEE_DUE_DAY_OF_MONTH", "10"))
+
+
+def validate_mail_config(app):
+    """Called once from create_app(), after app.config.from_object(), so an
+    unconfigured mail setup is caught at startup instead of surfacing as an
+    opaque connection/auth error the first time something tries to send.
+
+    There's no separate Dev/Prod Config subclass in this file (see Config
+    above -- a single class, env-var-driven throughout); `app.debug` is
+    already this codebase's stand-in for "am I a local dev server" (see the
+    reloader guard in notification_service.init_scheduler), so it's reused
+    here as the same signal: warn and keep booting on a debug/test server
+    (you may be working on something that never sends mail), but fail loudly
+    -- same philosophy as _require_env -- everywhere else (Render or any
+    other non-debug deployment), where a silently broken mailer could go
+    unnoticed for a long time.
+    """
+    if app.config.get("MAIL_SUPPRESS_SEND"):
+        return  # no real send will be attempted -- nothing to validate
+    if app.config.get("MAIL_USERNAME") and app.config.get("MAIL_PASSWORD"):
+        return  # configured
+
+    message = (
+        "MAIL_USERNAME/MAIL_PASSWORD are not set and MAIL_SUPPRESS_SEND is not enabled -- any "
+        "real send will fail with a connection/auth error. Set both in backend/.env (a Mailtrap "
+        "sandbox inbox works for local dev -- see .env.example), or set MAIL_SUPPRESS_SEND=true "
+        "if this environment should never send real email."
+    )
+    if app.debug or app.testing:
+        logger.warning(message)
+    else:
+        raise RuntimeError(message)

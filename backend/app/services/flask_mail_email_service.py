@@ -12,8 +12,10 @@ class FlaskMailEmailService(EmailService):
         self._mail = mail
         self._default_sender = default_sender
 
-    def send(self, to_email, subject, body):
-        message = Message(subject=subject, recipients=[to_email], body=body, sender=self._default_sender)
+    def send(self, to_email, subject, body, html_body=None):
+        message = Message(
+            subject=subject, recipients=[to_email], body=body, html=html_body, sender=self._default_sender
+        )
         try:
             self._mail.send(message)
         except Exception as exc:  # smtplib/socket errors -- provider-specific, not worth enumerating

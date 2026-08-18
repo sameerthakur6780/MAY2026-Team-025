@@ -1,12 +1,13 @@
 from flask import Flask, jsonify
 
-from config import Config
+from config import Config, validate_mail_config
 from app.extensions import bcrypt, cors, db, jwt, limiter, mail, migrate
 
 
 def create_app(config_class=Config):
     app = Flask(__name__, instance_relative_config=True)
     app.config.from_object(config_class)
+    validate_mail_config(app)
 
     db.init_app(app)
     migrate.init_app(app, db)
@@ -76,8 +77,9 @@ def create_app(config_class=Config):
     app.register_blueprint(fees_bp)
     app.register_blueprint(payments_bp)
 
-    from app.cli import create_admin
+    from app.cli import create_admin, send_test_email
     app.cli.add_command(create_admin)
+    app.cli.add_command(send_test_email)
 
     from app import models  # noqa: F401  registers models with SQLAlchemy metadata
 
