@@ -39,9 +39,6 @@ export default function Landing() {
       {/* Hero */}
       <section className="max-w-7xl mx-auto px-6 lg:px-8 pt-12 pb-20 grid lg:grid-cols-12 gap-12 items-center">
         <div className="lg:col-span-7 animate-fade-in-up">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-pill bg-sage text-ink text-xs font-semibold tracking-wider uppercase mb-6">
-            <Sparkles className="w-3.5 h-3.5" /> Built for tutoring centres
-          </div>
           <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold text-foreground tracking-tight leading-[1.05]">
             Less admin. <br />
             <span className="marker">More teaching.</span>
@@ -159,7 +156,7 @@ export default function Landing() {
       </section>
 
       <footer className="max-w-7xl mx-auto px-6 lg:px-8 py-10 flex items-center justify-between text-sm text-muted-foreground">
-        <div>© 2026 SmartBatch. Demo build.</div>
+        <div>© 2026 SmartBatch.</div>
         <div>Made with care for tutoring centres.</div>
       </footer>
     </div>

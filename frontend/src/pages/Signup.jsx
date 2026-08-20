@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { ROLE_LABEL } from "@/lib/store";
 
 const ROLES = [
-  { key: "admin", label: "Admin / Tutor", icon: ShieldCheck },
+  { key: "admin", label: "Admin", icon: ShieldCheck },
   { key: "parent", label: "Parent", icon: Users },
   { key: "student", label: "Student", icon: GraduationCap },
 ];

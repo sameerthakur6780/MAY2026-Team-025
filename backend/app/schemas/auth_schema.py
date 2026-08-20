@@ -1,4 +1,4 @@
-from marshmallow import Schema, ValidationError, fields, validate, validates_schema
+from marshmallow import Schema, fields, validate
 
 from app.models.user import RoleEnum
 from app.utils.validators import INDIAN_PHONE_ERROR, INDIAN_PHONE_REGEX
@@ -28,8 +28,3 @@ class SignupSchema(Schema):
     # parent-only
     occupation = fields.String(load_default=None, allow_none=True, validate=validate.Length(max=120))
     address = fields.String(load_default=None, allow_none=True, validate=validate.Length(max=255))
-
-    @validates_schema
-    def validate_student_fields(self, data, **kwargs):
-        if data.get("role") == RoleEnum.STUDENT.value and not data.get("admission_no"):
-            raise ValidationError("admission_no is required for student accounts", field_name="admission_no")

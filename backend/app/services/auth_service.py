@@ -42,8 +42,6 @@ def create_managed_account(data):
         raise AuthError("full_name and email are required", "missing_fields", 400)
     if len(password) < 6:
         raise AuthError("password must be at least 6 characters", "weak_password", 400)
-    if role == RoleEnum.STUDENT.value and not data.get("admission_no"):
-        raise AuthError("admission_no is required for student accounts", "missing_fields", 400)
     if User.query.filter_by(email=email).first() is not None:
         raise AuthError("An account with this email already exists", "email_taken", 409)
 
@@ -64,10 +62,14 @@ def create_managed_account(data):
             Parent(user_id=user.id, occupation=data.get("occupation"), address=data.get("address"))
         )
     elif role == RoleEnum.STUDENT.value:
+        # admission_no is unique+required at the DB level, but nobody types
+        # a meaningful one for a small tuition centre -- derive it from the
+        # user's own id (already unique) so it's never a required form field.
+        admission_no = data.get("admission_no") or f"STU{user.id:05d}"
         db.session.add(
             Student(
                 user_id=user.id,
-                admission_no=data["admission_no"],
+                admission_no=admission_no,
                 dob=_parse_date(data.get("dob")),
                 gender=data.get("gender"),
                 class_id=data.get("class_id"),

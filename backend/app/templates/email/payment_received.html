@@ -1,0 +1,10 @@
+{% extends "email/base.html" %}
+{% block title %}Payment received{% endblock %}
+{% block content %}
+<p>Hi {{ recipient_name }},</p>
+<p>
+  We've received a payment of <strong>Rs. {{ amount }}</strong>{% if receipt_no %} (receipt #{{ receipt_no }}){% endif %}
+  for {{ student_name }}.
+</p>
+<p>Thank you!</p>
+{% endblock %}

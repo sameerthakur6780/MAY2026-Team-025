@@ -10,6 +10,7 @@ class NotificationType(str, enum.Enum):
     MARKS_PUBLISHED = "marks_published"
     FEE_DUE_REMINDER = "fee_due_reminder"
     PAYMENT_RECEIVED = "payment_received"
+    ANNOUNCEMENT = "announcement"
 
 
 class NotificationStatus(str, enum.Enum):

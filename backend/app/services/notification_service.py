@@ -267,12 +267,7 @@ class NotificationService:
         ]
 
     @staticmethod
-    def notify_fee_due_reminder(parent_user_id, amount, due_date, cycle_label=None):
-        """STUB call site: nothing in this codebase calls this yet -- there's
-        no Fee/Payment model. Fully working once called, e.g. from a daily
-        job (the payments module would register) that finds fee records due
-        in 3 days and calls this once per record. No changes needed here
-        when that lands."""
+    def _fee_due_reminder_content(amount, due_date, cycle_label=None):
         cycle_note = f" ({cycle_label})" if cycle_label else ""
         subject = "Fee payment due soon"
         body = (
@@ -280,7 +275,42 @@ class NotificationService:
             f"Please pay before the due date to avoid a late fee.\n\n"
             f"- SmartBatch"
         )
+        return subject, body
+
+    @staticmethod
+    def notify_fee_due_reminder(parent_user_id, amount, due_date, cycle_label=None):
+        """Sends immediately -- call this on the day the reminder should
+        actually go out."""
+        subject, body = NotificationService._fee_due_reminder_content(amount, due_date, cycle_label)
         return NotificationService.send_now(parent_user_id, NotificationType.FEE_DUE_REMINDER, subject, body)
+
+    @staticmethod
+    def schedule_fee_due_reminder(parent_user_id, amount, due_date, scheduled_at, cycle_label=None):
+        """Same reminder content as notify_fee_due_reminder, but handed to
+        the background scheduler for `scheduled_at` instead of sent right
+        away. fee_service calls this at StudentFee-creation time with
+        scheduled_at = due_date - 3 days, so the reminder is queued well
+        before the due date rather than requiring a second job to notice
+        "3 days out" has arrived."""
+        subject, body = NotificationService._fee_due_reminder_content(amount, due_date, cycle_label)
+        return NotificationService.schedule(
+            parent_user_id, NotificationType.FEE_DUE_REMINDER, subject, body, scheduled_at
+        )
+
+    @staticmethod
+    def notify_broadcast_announcement(user_ids, title, message, priority="medium"):
+        """Fans one admin-authored announcement out to many recipients at
+        once. Scheduled for "now" rather than sent inline -- same reasoning
+        as notify_homework_assigned: an admin broadcasting to a whole class
+        or the entire centre shouldn't block the request on N synchronous
+        SMTP round-trips."""
+        subject = f"[Urgent] {title}" if priority == "high" else title
+        body = f"{message}\n\n- SmartBatch" if message else "- SmartBatch"
+        now = _utcnow()
+        return [
+            NotificationService.schedule(user_id, NotificationType.ANNOUNCEMENT, subject, body, now)
+            for user_id in user_ids
+        ]
 
     @staticmethod
     def notify_payment_received(parent_user_id, amount, receipt_no=None):

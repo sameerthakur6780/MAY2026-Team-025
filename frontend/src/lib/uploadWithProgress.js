@@ -1,4 +1,4 @@
-import { ApiError, BASE_URL, formatErrorMessage, getCookie } from "@/lib/apiClient";
+import { ApiError, BASE_URL, formatErrorMessage, getCsrfToken } from "@/lib/apiClient";
 
 export function uploadWithProgress(path, formData, onProgress) {
   return new Promise((resolve, reject) => {
@@ -6,7 +6,7 @@ export function uploadWithProgress(path, formData, onProgress) {
     xhr.open("POST", `${BASE_URL}${path}`);
     xhr.withCredentials = true;
 
-    const csrfToken = getCookie("csrf_access_token");
+    const csrfToken = getCsrfToken();
     if (csrfToken) {
       xhr.setRequestHeader("X-CSRF-TOKEN", csrfToken);
     }

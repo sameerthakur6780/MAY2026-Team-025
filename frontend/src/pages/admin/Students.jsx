@@ -35,7 +35,6 @@ function emptyForm() {
     email: "",
     password: "",
     phone: "",
-    admission_no: "",
     dob: "",
     gender: "",
     class_id: NONE,
@@ -73,7 +72,6 @@ export default function AdminStudents() {
     setEditing(student);
     setForm({
       ...emptyForm(),
-      admission_no: student.admission_no || "",
       dob: student.dob || "",
       gender: student.gender || "",
       class_id: student.class_id ? String(student.class_id) : NONE,
@@ -89,7 +87,6 @@ export default function AdminStudents() {
     try {
       if (editing) {
         await api.patch(`/api/students/${editing.id}`, {
-          admission_no: form.admission_no,
           dob: form.dob || null,
           gender: form.gender || null,
           class_id: form.class_id === NONE ? null : Number(form.class_id),
@@ -103,7 +100,6 @@ export default function AdminStudents() {
           email: form.email,
           password: form.password,
           phone: form.phone || null,
-          admission_no: form.admission_no,
           dob: form.dob || null,
           gender: form.gender || null,
           class_id: form.class_id === NONE ? null : Number(form.class_id),
@@ -278,10 +274,6 @@ export default function AdminStudents() {
               </div>
             )}
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label>Admission No</Label>
-                <Input required placeholder="e.g. ADM2026001" value={form.admission_no} onChange={(e) => setForm({ ...form, admission_no: e.target.value })} />
-              </div>
               <div className="space-y-1.5">
                 <Label>Date of birth</Label>
                 <Input type="date" value={form.dob} onChange={(e) => setForm({ ...form, dob: e.target.value })} />

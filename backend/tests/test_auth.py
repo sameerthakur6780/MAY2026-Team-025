@@ -2,6 +2,8 @@
 
 from conftest import PASSWORD, create_admin_user, create_parent, create_student, create_teacher, login_as
 
+from app.models.student import Student
+
 
 # ---------------------------------------------------------------------------
 # POST /api/auth/login
@@ -13,7 +15,17 @@ def test_login_success_sets_cookies_and_returns_profile(client):
     resp = client.post("/api/auth/login", json={"email": user.email, "password": PASSWORD})
     assert resp.status_code == 200
     body = resp.get_json()
-    assert body == {"id": user.id, "full_name": user.full_name, "email": user.email, "role": "admin", "phone": user.phone}
+    # csrf_access_token/csrf_refresh_token are also returned in the body --
+    # cross-origin deployments (Vercel frontend, Render backend) can't read
+    # the CSRF cookies via document.cookie, so the frontend holds these in
+    # memory instead (see apiClient.js).
+    assert body["id"] == user.id
+    assert body["full_name"] == user.full_name
+    assert body["email"] == user.email
+    assert body["role"] == "admin"
+    assert body["phone"] == user.phone
+    assert isinstance(body["csrf_access_token"], str) and body["csrf_access_token"]
+    assert isinstance(body["csrf_refresh_token"], str) and body["csrf_refresh_token"]
     set_cookie_headers = resp.headers.getlist("Set-Cookie")
     assert any("access_token_cookie" in h for h in set_cookie_headers)
     assert any("csrf_access_token" in h for h in set_cookie_headers)
@@ -225,7 +237,10 @@ def test_signup_invalid_phone_format_is_validation_error(admin):
     assert "phone" in body["message"]
 
 
-def test_signup_student_without_admission_no_is_validation_error(admin):
+def test_signup_student_without_admission_no_is_auto_generated(admin):
+    """admission_no isn't required at signup -- nobody types a meaningful
+    one for a small tuition centre, so it's derived from the new user's own
+    id instead (see auth_service.create_managed_account)."""
     resp = admin.post(
         "/api/auth/signup",
         json={
@@ -236,10 +251,10 @@ def test_signup_student_without_admission_no_is_validation_error(admin):
             "phone": "9876543214",
         },
     )
-    assert resp.status_code == 400
+    assert resp.status_code == 201
     body = resp.get_json()
-    assert body["error"] == "validation_error"
-    assert "admission_no" in body["message"]
+    student = Student.query.filter_by(user_id=body["id"]).one()
+    assert student.admission_no == f"STU{body['id']:05d}"
 
 
 def test_signup_rejects_admin_role(admin):
