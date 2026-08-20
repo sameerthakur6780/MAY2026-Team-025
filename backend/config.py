@@ -124,6 +124,20 @@ class Config:
     # local dev server without SMTP creds configured yet.
     MAIL_SUPPRESS_SEND = _bool_env("MAIL_SUPPRESS_SEND", default=False)
 
+    # Resend (HTTP-based transactional email -- see
+    # app/services/resend_email_service.py). Preferred over MAIL_* whenever
+    # set (see get_email_service()): Render blocks/restricts outbound raw
+    # SMTP, so smtplib connections to MAIL_SERVER just hang there until
+    # gunicorn's worker timeout kills the whole request (see the timeout
+    # comment in flask_mail_email_service.py). Resend sends over HTTPS,
+    # which isn't affected. RESEND_FROM_EMAIL defaults to Resend's shared
+    # sandbox domain, which works without verifying a custom domain but can
+    # only deliver to the email address that created the Resend account --
+    # verify a real domain in the Resend dashboard to send to arbitrary
+    # recipients (e.g. real parent/student addresses) in production.
+    RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
+    RESEND_FROM_EMAIL = os.environ.get("RESEND_FROM_EMAIL", "SmartBatch <onboarding@resend.dev>")
+
     # Scheduler for NotificationService.schedule(). Off by default in tests
     # (see tests/conftest.py) so pytest never starts a background thread.
     SCHEDULER_ENABLED = _bool_env("SCHEDULER_ENABLED", default=True)
@@ -164,6 +178,8 @@ def validate_mail_config(app):
     """
     if app.config.get("MAIL_SUPPRESS_SEND"):
         return  # no real send will be attempted -- nothing to validate
+    if app.config.get("RESEND_API_KEY"):
+        return  # configured -- get_email_service() prefers this over MAIL_*
     if app.config.get("MAIL_USERNAME") and app.config.get("MAIL_PASSWORD"):
         return  # configured
 

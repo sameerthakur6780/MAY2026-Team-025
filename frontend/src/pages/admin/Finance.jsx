@@ -145,7 +145,7 @@ export default function AdminFinance() {
           <div className="flex items-center justify-between mb-5">
             <div>
               <div className="text-xs tracking-[0.2em] uppercase font-bold text-muted-foreground">Fee ledger</div>
-              <div className="font-display text-xl font-semibold mt-1">All records</div>
+              <div className="font-display text-xl font-semibold mt-1">Who has to pay</div>
             </div>
             <Dialog open={dialogOpen} onOpenChange={handleDialogChange}>
               <DialogTrigger asChild>
@@ -198,6 +198,12 @@ export default function AdminFinance() {
               title="No fee records yet"
               description="Create a fee plan for a student to generate their first invoice."
             />
+          ) : unpaid.length === 0 ? (
+            <EmptyState
+              icon={Wallet}
+              title="Nothing outstanding"
+              description="Every invoice on record has been paid."
+            />
           ) : (
             <Table>
               <TableHeader><TableRow className="border-soft">
@@ -209,7 +215,13 @@ export default function AdminFinance() {
                 <TableHead className="text-right text-muted-foreground">Action</TableHead>
               </TableRow></TableHeader>
               <TableBody>
-                {items.map((r) => (
+                {/* Only unpaid invoices -- this table answers "who has to pay",
+                    not "every invoice ever" (that's what Collected/Outstanding
+                    above already summarize). A student can legitimately have
+                    more than one unpaid cycle at once (e.g. an overdue one
+                    plus a newly-generated upcoming one) -- that's two real
+                    invoices, not a duplicate row. */}
+                {unpaid.map((r) => (
                   <TableRow key={r.id} className="border-soft" data-testid={`fee-row-${r.id}`}>
                     <TableCell className="font-medium">{r.student_name}</TableCell>
                     <TableCell className="text-muted-foreground">{r.cycle}</TableCell>
@@ -217,18 +229,16 @@ export default function AdminFinance() {
                     <TableCell className="text-muted-foreground">{r.due_date}</TableCell>
                     <TableCell><Badge className={`${statusColor[r.status]} border-0 capitalize`}>{r.status}</Badge></TableCell>
                     <TableCell className="text-right">
-                      {r.status !== "paid" && (
-                        <Button
-                          data-testid={`remind-${r.id}`}
-                          disabled={remindingId === r.id}
-                          onClick={() => sendReminder(r)}
-                          variant="outline"
-                          size="sm"
-                          className="gap-1.5 border-soft"
-                        >
-                          <BellRing className="w-3.5 h-3.5" /> {remindingId === r.id ? "Sending…" : "Remind"}
-                        </Button>
-                      )}
+                      <Button
+                        data-testid={`remind-${r.id}`}
+                        disabled={remindingId === r.id}
+                        onClick={() => sendReminder(r)}
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5 border-soft"
+                      >
+                        <BellRing className="w-3.5 h-3.5" /> {remindingId === r.id ? "Sending…" : "Remind"}
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
