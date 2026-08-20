@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify, request
 from marshmallow import ValidationError
+from sqlalchemy.orm import contains_eager, selectinload
 
 from app.models.teacher import Teacher
 from app.models.user import User
@@ -23,7 +24,13 @@ _update_schema = TeacherUpdateSchema()
 @teachers_bp.get("")
 @role_required("admin")
 def list_teachers():
-    query = Teacher.query.join(Teacher.user).order_by(User.full_name)
+    # serialize_teacher touches user (already joined for ordering -- reuse it
+    # via contains_eager instead of a second join) and class_subjects on every row.
+    query = (
+        Teacher.query.join(Teacher.user)
+        .options(contains_eager(Teacher.user), selectinload(Teacher.class_subjects))
+        .order_by(User.full_name)
+    )
     return jsonify(paginate_query(query, serialize_teacher)), 200
 
 

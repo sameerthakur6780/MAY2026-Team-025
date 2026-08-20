@@ -1,4 +1,5 @@
 from sqlalchemy import false
+from sqlalchemy.orm import joinedload
 
 from app.extensions import db
 from app.models.academic import SchoolClass, Subject
@@ -112,6 +113,9 @@ def list_tests_query(role, class_id=None, subject_id=None):
         query = query.filter(Test.class_id == class_id)
     if subject_id is not None:
         query = query.filter(Test.subject_id == subject_id)
+    # serialize_test touches school_class/subject/creator on every row --
+    # eager-load them in one query instead of 3 extra round trips per row.
+    query = query.options(joinedload(Test.school_class), joinedload(Test.subject), joinedload(Test.creator))
     return query.order_by(Test.due_date.desc())
 
 

@@ -103,7 +103,7 @@ class FakeStorageService:
         self.store[path] = file_bytes
         return path
 
-    def get_signed_url(self, path, expires_in):
+    def get_signed_url(self, path, expires_in, download_filename=None):
         return f"https://fake-storage.test/{path}?expires_in={expires_in}"
 
     def delete(self, path):

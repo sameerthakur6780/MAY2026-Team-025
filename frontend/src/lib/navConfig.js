@@ -9,8 +9,6 @@ export const ADMIN_NAV = [
   { to: "/admin/assignments", key: "admin-assignments", label: "Assignments", icon: ClipboardList },
   { to: "/admin/attendance", key: "admin-attendance", label: "Attendance", icon: Camera },
   { to: "/admin/resources", key: "admin-resources", label: "Resources", icon: FolderOpen },
-  { to: "/admin/homework", key: "admin-homework", label: "Homework", icon: BookOpen },
-  { to: "/admin/grading", key: "admin-grading", label: "AI Grading", icon: ClipboardCheck },
   { to: "/admin/alerts", key: "admin-alerts", label: "Alerts", icon: Megaphone },
 ];
 
@@ -18,6 +16,8 @@ export const TEACHER_NAV = [
   { to: "/teacher/dashboard", key: "teacher-dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/teacher/attendance", key: "teacher-attendance", label: "Attendance", icon: CalendarClock },
   { to: "/teacher/resources", key: "teacher-resources", label: "Resources", icon: FolderOpen },
+  { to: "/teacher/homework", key: "teacher-homework", label: "Homework", icon: BookOpen },
+  { to: "/teacher/grading", key: "teacher-grading", label: "AI Grading", icon: ClipboardCheck },
 ];
 
 export const PARENT_NAV = [

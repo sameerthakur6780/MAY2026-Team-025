@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt
 from marshmallow import ValidationError
+from sqlalchemy.orm import selectinload
 
 from app.models.academic import SchoolClass
 from app.schemas.class_schema import ClassSchema
@@ -24,7 +25,9 @@ _class_schema = ClassSchema()
 @role_required("admin", "teacher", "parent")
 def list_classes():
     role = get_jwt()["role"]
-    query = scoped_class_query(role).order_by(SchoolClass.grade)
+    # serialize_class computes len(school_class.students) per row -- eager-load
+    # the collection in one query instead of an extra round trip per row.
+    query = scoped_class_query(role).options(selectinload(SchoolClass.students)).order_by(SchoolClass.grade)
     return jsonify(paginate_query(query, serialize_class)), 200
 
 
