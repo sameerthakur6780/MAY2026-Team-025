@@ -1,0 +1,14 @@
+{% extends "email/base.html" %}
+{% block title %}Fee payment due soon{% endblock %}
+{% block heading %}Fee payment due soon{% endblock %}
+{% block content %}
+<p style="margin:0 0 20px;text-align:center;color:#1f2328;">
+  Hi {{ recipient_name }}, a fee payment{% if student_name %} for {{ student_name }}{% endif %} is coming up.
+</p>
+<div style="border:1px solid #d0d7de;border-radius:6px;padding:24px;text-align:center;margin:0 0 20px;">
+  <p style="margin:0 0 8px;font-size:13px;color:#656d76;">Amount due{% if cycle_label %} &middot; {{ cycle_label }}{% endif %}</p>
+  <p style="margin:0;font-size:28px;font-weight:600;color:#1f2328;">Rs. {{ amount }}</p>
+  <p style="margin:12px 0 0;font-size:13px;color:#656d76;">Due on {{ due_date }}</p>
+</div>
+<p style="margin:0;text-align:center;color:#1f2328;">Please pay before the due date to avoid a late fee.</p>
+{% endblock %}

@@ -6,7 +6,6 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 
 import Landing from "@/pages/Landing";
 import Login from "@/pages/Login";
-import Signup from "@/pages/Signup";
 
 import TeacherDashboard from "@/pages/teacher/Dashboard";
 import TeacherResources from "@/pages/teacher/Resources";
@@ -27,7 +26,6 @@ import AdminAlerts from "@/pages/admin/Alerts";
 import ParentDashboard from "@/pages/parent/Dashboard";
 import ParentSafety from "@/pages/parent/Safety";
 import ParentFees from "@/pages/parent/Fees";
-import ParentPerformance from "@/pages/parent/Performance";
 import ParentResources from "@/pages/parent/Resources";
 import ParentAttendance from "@/pages/parent/Attendance";
 
@@ -46,7 +44,6 @@ function App() {
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
 
             <Route path="/admin/dashboard" element={<ProtectedRoute role="admin"><AdminFinance /></ProtectedRoute>} />
             <Route path="/admin/students" element={<ProtectedRoute role="admin"><AdminStudents /></ProtectedRoute>} />
@@ -67,7 +64,6 @@ function App() {
             <Route path="/parent/dashboard" element={<ProtectedRoute role="parent"><ParentDashboard /></ProtectedRoute>} />
             <Route path="/parent/safety" element={<ProtectedRoute role="parent"><ParentSafety /></ProtectedRoute>} />
             <Route path="/parent/fees" element={<ProtectedRoute role="parent"><ParentFees /></ProtectedRoute>} />
-            <Route path="/parent/performance" element={<ProtectedRoute role="parent"><ParentPerformance /></ProtectedRoute>} />
             <Route path="/parent/resources" element={<ProtectedRoute role="parent"><ParentResources /></ProtectedRoute>} />
             <Route path="/parent/attendance" element={<ProtectedRoute role="parent"><ParentAttendance /></ProtectedRoute>} />
 

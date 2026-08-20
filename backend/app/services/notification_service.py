@@ -24,6 +24,8 @@ import logging
 import os
 from datetime import datetime, timezone
 
+from flask import render_template
+
 from app.extensions import db, scheduler
 from app.models.notification import Notification, NotificationStatus, NotificationType
 from app.models.student import Student
@@ -80,7 +82,9 @@ def _deliver(notification):
         return notification
 
     try:
-        get_email_service().send(user.email, notification.subject, notification.body)
+        get_email_service().send(
+            user.email, notification.subject, notification.body, html_body=notification.html_body
+        )
     except EmailSendError as exc:
         # FAILED is terminal, not retried -- both the pre-check in
         # _run_scheduled_notification and the claim above only ever match
@@ -164,9 +168,25 @@ def init_scheduler(app):
             _register_job(notification)
 
 
+def list_notifications_query(user_id):
+    return Notification.query.filter_by(user_id=user_id).order_by(Notification.created_at.desc())
+
+
+def serialize_notification(notification):
+    return {
+        "id": notification.id,
+        "type": notification.type.value,
+        "subject": notification.subject,
+        "body": notification.body,
+        "status": notification.status.value,
+        "created_at": notification.created_at.isoformat(),
+        "sent_at": notification.sent_at.isoformat() if notification.sent_at else None,
+    }
+
+
 class NotificationService:
     @staticmethod
-    def send_now(user_id, type_, subject, body):
+    def send_now(user_id, type_, subject, body, html_body=None):
         """Creates the Notification row and delivers it immediately,
         synchronously. Use for single-recipient, low-volume triggers where
         blocking the caller for one email round-trip is a non-issue."""
@@ -178,6 +198,7 @@ class NotificationService:
             type=NotificationType(type_),
             subject=subject,
             body=body,
+            html_body=html_body,
             status=NotificationStatus.PENDING,
             scheduled_at=None,
         )
@@ -186,7 +207,7 @@ class NotificationService:
         return _deliver(notification)
 
     @staticmethod
-    def schedule(user_id, type_, subject, body, scheduled_at):
+    def schedule(user_id, type_, subject, body, scheduled_at, html_body=None):
         """Creates the Notification row and hands delivery to the
         background scheduler for `scheduled_at`. Use for future-dated sends
         (reminders) or to get bulk/fan-out sends (e.g. a whole class) off
@@ -200,6 +221,7 @@ class NotificationService:
             type=NotificationType(type_),
             subject=subject,
             body=body,
+            html_body=html_body,
             status=NotificationStatus.PENDING,
             scheduled_at=scheduled_at,
         )
@@ -207,6 +229,19 @@ class NotificationService:
         db.session.commit()
         _register_job(notification)
         return notification
+
+    @staticmethod
+    def _render_email_html(template, user_id, **context):
+        """Renders `app/templates/email/{template}.html` for one recipient,
+        filling in `recipient_name` from the user row so callers don't each
+        have to look it up. Rendered once at notification-creation time
+        (not at delivery time) and stored on the Notification row -- see
+        Notification.html_body -- so a *scheduled* send still has its HTML
+        after a process restart re-registers the job via init_scheduler()'s
+        catch-up, without needing to re-render then."""
+        user = User.query.get(user_id)
+        context.setdefault("recipient_name", user.full_name if user else "there")
+        return render_template(f"email/{template}.html", **context)
 
     # ------------------------------------------------------------------
     # Typed helpers -- consistent subject/body per trigger. Existing and
@@ -278,14 +313,20 @@ class NotificationService:
         return subject, body
 
     @staticmethod
-    def notify_fee_due_reminder(parent_user_id, amount, due_date, cycle_label=None):
+    def notify_fee_due_reminder(parent_user_id, amount, due_date, cycle_label=None, student_name=None):
         """Sends immediately -- call this on the day the reminder should
         actually go out."""
         subject, body = NotificationService._fee_due_reminder_content(amount, due_date, cycle_label)
-        return NotificationService.send_now(parent_user_id, NotificationType.FEE_DUE_REMINDER, subject, body)
+        html_body = NotificationService._render_email_html(
+            "fee_due_reminder", parent_user_id, amount=amount, due_date=due_date,
+            cycle_label=cycle_label, student_name=student_name,
+        )
+        return NotificationService.send_now(
+            parent_user_id, NotificationType.FEE_DUE_REMINDER, subject, body, html_body=html_body
+        )
 
     @staticmethod
-    def schedule_fee_due_reminder(parent_user_id, amount, due_date, scheduled_at, cycle_label=None):
+    def schedule_fee_due_reminder(parent_user_id, amount, due_date, scheduled_at, cycle_label=None, student_name=None):
         """Same reminder content as notify_fee_due_reminder, but handed to
         the background scheduler for `scheduled_at` instead of sent right
         away. fee_service calls this at StudentFee-creation time with
@@ -293,8 +334,12 @@ class NotificationService:
         before the due date rather than requiring a second job to notice
         "3 days out" has arrived."""
         subject, body = NotificationService._fee_due_reminder_content(amount, due_date, cycle_label)
+        html_body = NotificationService._render_email_html(
+            "fee_due_reminder", parent_user_id, amount=amount, due_date=due_date,
+            cycle_label=cycle_label, student_name=student_name,
+        )
         return NotificationService.schedule(
-            parent_user_id, NotificationType.FEE_DUE_REMINDER, subject, body, scheduled_at
+            parent_user_id, NotificationType.FEE_DUE_REMINDER, subject, body, scheduled_at, html_body=html_body
         )
 
     @staticmethod
@@ -307,17 +352,29 @@ class NotificationService:
         subject = f"[Urgent] {title}" if priority == "high" else title
         body = f"{message}\n\n- SmartBatch" if message else "- SmartBatch"
         now = _utcnow()
-        return [
-            NotificationService.schedule(user_id, NotificationType.ANNOUNCEMENT, subject, body, now)
-            for user_id in user_ids
-        ]
+        notifications = []
+        for user_id in user_ids:
+            html_body = NotificationService._render_email_html(
+                "broadcast_announcement", user_id, title=title, message=message, priority=priority
+            )
+            notifications.append(
+                NotificationService.schedule(
+                    user_id, NotificationType.ANNOUNCEMENT, subject, body, now, html_body=html_body
+                )
+            )
+        return notifications
 
     @staticmethod
-    def notify_payment_received(parent_user_id, amount, receipt_no=None):
+    def notify_payment_received(parent_user_id, amount, receipt_no=None, student_name=None):
         """STUB call site, same as notify_fee_due_reminder -- ready for the
         payments module to call directly from a successful payment
         confirmation/webhook handler."""
         receipt_note = f" (receipt #{receipt_no})" if receipt_no else ""
         subject = "Payment received"
         body = f"We've received your payment of Rs. {amount}{receipt_note}. Thank you!\n\n- SmartBatch"
-        return NotificationService.send_now(parent_user_id, NotificationType.PAYMENT_RECEIVED, subject, body)
+        html_body = NotificationService._render_email_html(
+            "payment_received", parent_user_id, amount=amount, receipt_no=receipt_no, student_name=student_name
+        )
+        return NotificationService.send_now(
+            parent_user_id, NotificationType.PAYMENT_RECEIVED, subject, body, html_body=html_body
+        )

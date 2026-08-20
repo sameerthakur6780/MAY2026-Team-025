@@ -1,6 +1,6 @@
 Hi {{ recipient_name }},
 
-We've received a payment of Rs. {{ amount }}{% if receipt_no %} (receipt #{{ receipt_no }}){% endif %} for {{ student_name }}.
+We've received a payment of Rs. {{ amount }}{% if receipt_no %} (receipt #{{ receipt_no }}){% endif %}{% if student_name %} for {{ student_name }}{% endif %}.
 
 Thank you!
 

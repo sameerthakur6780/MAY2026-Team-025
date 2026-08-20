@@ -33,6 +33,11 @@ class Notification(db.Model, TimestampMixin):
     type = db.Column(db.Enum(NotificationType), nullable=False, index=True)
     subject = db.Column(db.String(255), nullable=False)
     body = db.Column(db.Text, nullable=False)
+    # Optional HTML alternative rendered from an app/templates/email/*.html
+    # template at creation time (see NotificationService._render_email_html).
+    # Stored rather than re-rendered at delivery time so a scheduled
+    # notification still has it after a process restart re-registers the job.
+    html_body = db.Column(db.Text, nullable=True)
     status = db.Column(db.Enum(NotificationStatus), nullable=False, default=NotificationStatus.PENDING, index=True)
     # NULL scheduled_at means "send as soon as possible" (send_now()).
     scheduled_at = db.Column(db.DateTime, nullable=True)
