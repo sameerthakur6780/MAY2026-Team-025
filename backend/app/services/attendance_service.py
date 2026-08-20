@@ -4,6 +4,7 @@ from pathlib import Path
 from flask import current_app
 from sqlalchemy import false
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import joinedload
 
 from app.extensions import db
 from app.models.academic import SchoolClass
@@ -222,4 +223,11 @@ def list_attendance_query(role, student_id=None, class_id=None, date_from=None, 
         query = query.filter(Attendance.date >= date_from)
     if date_to is not None:
         query = query.filter(Attendance.date <= date_to)
+    # serialize_attendance touches student.user/school_class/marker on every
+    # row -- eager-load them in one query instead of 3 extra round trips per row.
+    query = query.options(
+        joinedload(Attendance.student).joinedload(Student.user),
+        joinedload(Attendance.school_class),
+        joinedload(Attendance.marker),
+    )
     return query.order_by(Attendance.date.desc(), Attendance.student_id)

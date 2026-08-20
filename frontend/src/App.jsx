@@ -10,6 +10,8 @@ import Login from "@/pages/Login";
 import TeacherDashboard from "@/pages/teacher/Dashboard";
 import TeacherResources from "@/pages/teacher/Resources";
 import TeacherAttendance from "@/pages/teacher/Attendance";
+import TeacherHomework from "@/pages/teacher/Homework";
+import TeacherGrading from "@/pages/teacher/Grading";
 
 import AdminStudents from "@/pages/admin/Students";
 import AdminClasses from "@/pages/admin/Classes";
@@ -19,8 +21,6 @@ import AdminAssignments from "@/pages/admin/Assignments";
 import AdminFinance from "@/pages/admin/Finance";
 import AdminAttendance from "@/pages/admin/Attendance";
 import AdminResources from "@/pages/admin/Resources";
-import AdminHomework from "@/pages/admin/Homework";
-import AdminGrading from "@/pages/admin/Grading";
 import AdminAlerts from "@/pages/admin/Alerts";
 
 import ParentDashboard from "@/pages/parent/Dashboard";
@@ -53,13 +53,13 @@ function App() {
             <Route path="/admin/assignments" element={<ProtectedRoute role="admin"><AdminAssignments /></ProtectedRoute>} />
             <Route path="/admin/attendance" element={<ProtectedRoute role="admin"><AdminAttendance /></ProtectedRoute>} />
             <Route path="/admin/resources" element={<ProtectedRoute role="admin"><AdminResources /></ProtectedRoute>} />
-            <Route path="/admin/homework" element={<ProtectedRoute role="admin"><AdminHomework /></ProtectedRoute>} />
-            <Route path="/admin/grading" element={<ProtectedRoute role="admin"><AdminGrading /></ProtectedRoute>} />
             <Route path="/admin/alerts" element={<ProtectedRoute role="admin"><AdminAlerts /></ProtectedRoute>} />
 
             <Route path="/teacher/dashboard" element={<ProtectedRoute role="teacher"><TeacherDashboard /></ProtectedRoute>} />
             <Route path="/teacher/attendance" element={<ProtectedRoute role="teacher"><TeacherAttendance /></ProtectedRoute>} />
             <Route path="/teacher/resources" element={<ProtectedRoute role="teacher"><TeacherResources /></ProtectedRoute>} />
+            <Route path="/teacher/homework" element={<ProtectedRoute role="teacher"><TeacherHomework /></ProtectedRoute>} />
+            <Route path="/teacher/grading" element={<ProtectedRoute role="teacher"><TeacherGrading /></ProtectedRoute>} />
 
             <Route path="/parent/dashboard" element={<ProtectedRoute role="parent"><ParentDashboard /></ProtectedRoute>} />
             <Route path="/parent/safety" element={<ProtectedRoute role="parent"><ParentSafety /></ProtectedRoute>} />

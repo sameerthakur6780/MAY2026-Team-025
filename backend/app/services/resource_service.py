@@ -3,6 +3,7 @@ from pathlib import Path
 
 from flask import current_app
 from sqlalchemy import false
+from sqlalchemy.orm import joinedload
 from werkzeug.utils import secure_filename
 
 from app.extensions import db
@@ -104,6 +105,9 @@ def list_resources_query(role, class_id=None, subject_id=None):
         query = query.filter(Resource.class_id == class_id)
     if subject_id is not None:
         query = query.filter(Resource.subject_id == subject_id)
+    # serialize_resource touches subject/school_class/uploader on every row --
+    # eager-load them in one query instead of 3 extra round trips per row.
+    query = query.options(joinedload(Resource.subject), joinedload(Resource.school_class), joinedload(Resource.uploader))
     return query.order_by(Resource.created_at.desc())
 
 
@@ -133,7 +137,7 @@ def get_resource_scoped(resource_id, role):
 def get_download_url(resource_id, role):
     resource = get_resource_scoped(resource_id, role)
     expires_in = current_app.config["RESOURCE_SIGNED_URL_EXPIRY_SECONDS"]
-    url = get_storage_service().get_signed_url(resource.storage_path, expires_in)
+    url = get_storage_service().get_signed_url(resource.storage_path, expires_in, download_filename=resource.filename)
     return url, expires_in, resource
 
 

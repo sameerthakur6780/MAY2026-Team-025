@@ -11,8 +11,12 @@ class StorageService(ABC):
         """Uploads bytes to `path` in the backing store. Returns the stored path."""
 
     @abstractmethod
-    def get_signed_url(self, path, expires_in):
-        """Returns a time-limited URL for downloading the object at `path`."""
+    def get_signed_url(self, path, expires_in, download_filename=None):
+        """Returns a time-limited URL for downloading the object at `path`.
+
+        When download_filename is given, the URL is built to force the browser
+        to save the file (Content-Disposition: attachment) under that name
+        instead of opening it inline."""
 
     @abstractmethod
     def delete(self, path):

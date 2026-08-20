@@ -4,6 +4,7 @@ from pathlib import Path
 from flask import current_app
 from sqlalchemy import false
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import joinedload
 from werkzeug.utils import secure_filename
 
 from app.extensions import db
@@ -55,6 +56,9 @@ def list_students_query(role, class_id=None, grade=None):
         query = query.filter(Student.class_id == class_id)
     if grade is not None:
         query = query.join(SchoolClass, Student.class_id == SchoolClass.id).filter(SchoolClass.grade == grade)
+    # serialize_student touches user/school_class on every row -- eager-load
+    # them in one query instead of 2 extra round trips per row.
+    query = query.options(joinedload(Student.user), joinedload(Student.school_class))
     return query
 
 

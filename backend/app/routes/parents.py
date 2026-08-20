@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify, request
 from marshmallow import ValidationError
+from sqlalchemy.orm import contains_eager, selectinload
 
 from app.models.parent import Parent
 from app.models.user import User
@@ -24,7 +25,13 @@ _update_schema = ParentUpdateSchema()
 @parents_bp.get("")
 @role_required("admin")
 def list_parents():
-    query = Parent.query.join(Parent.user).order_by(User.full_name)
+    # serialize_parent touches user (already joined for ordering -- reuse it
+    # via contains_eager instead of a second join) and students on every row.
+    query = (
+        Parent.query.join(Parent.user)
+        .options(contains_eager(Parent.user), selectinload(Parent.students))
+        .order_by(User.full_name)
+    )
     return jsonify(paginate_query(query, serialize_parent)), 200
 
 
