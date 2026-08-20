@@ -1,4 +1,4 @@
-# EduCore — Frontend
+# SmartBatch — Frontend
 
 A tutoring-centre management platform with three role-based portals (Admin/Tutor, Parent, Student), covering finance, AI-simulated attendance/grading, resources, homework and an AI assistant demo.
 

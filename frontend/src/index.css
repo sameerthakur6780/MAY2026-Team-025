@@ -4,16 +4,17 @@
 
 body {
     margin: 0;
-    font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-family: "Plus Jakarta Sans", "Figtree", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    background: #F9F8F6;
-    color: #1C1C1C;
+    background: #232323;
+    color: #FFFFFF;
 }
 
 h1, h2, h3, h4, h5, h6, .font-display {
     font-family: "Outfit", sans-serif;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.02em;
+    font-weight: 700;
 }
 
 code {
@@ -22,31 +23,31 @@ code {
 
 @layer base {
     :root {
-        --background: 40 20% 97%;
-        --foreground: 0 0% 11%;
-        --card: 0 0% 100%;
-        --card-foreground: 0 0% 11%;
-        --popover: 0 0% 100%;
-        --popover-foreground: 0 0% 11%;
-        --primary: 156 37% 18%;
-        --primary-foreground: 40 20% 97%;
-        --secondary: 40 15% 93%;
-        --secondary-foreground: 156 37% 18%;
-        --muted: 40 15% 93%;
-        --muted-foreground: 0 0% 36%;
-        --accent: 122 20% 80%;
-        --accent-foreground: 156 37% 18%;
-        --destructive: 355 78% 56%;
-        --destructive-foreground: 0 0% 98%;
-        --border: 40 15% 88%;
-        --input: 40 15% 88%;
-        --ring: 156 37% 18%;
-        --chart-1: 156 37% 18%;
-        --chart-2: 14 68% 63%;
-        --chart-3: 122 20% 60%;
-        --chart-4: 30 87% 67%;
-        --chart-5: 207 39% 44%;
-        --radius: 0.75rem;
+        --background: 0 0% 14%;
+        --foreground: 0 0% 100%;
+        --card: 0 0% 17%;
+        --card-foreground: 0 0% 100%;
+        --popover: 0 0% 17%;
+        --popover-foreground: 0 0% 100%;
+        --primary: 7 90% 63%;
+        --primary-foreground: 0 0% 4%;
+        --secondary: 0 0% 23%;
+        --secondary-foreground: 0 0% 100%;
+        --muted: 0 0% 23%;
+        --muted-foreground: 0 0% 60%;
+        --accent: 0 0% 23%;
+        --accent-foreground: 0 0% 100%;
+        --destructive: 7 90% 63%;
+        --destructive-foreground: 0 0% 4%;
+        --border: 0 0% 25%;
+        --input: 0 0% 23%;
+        --ring: 0 0% 100%;
+        --chart-1: 7 90% 63%;
+        --chart-2: 43 93% 68%;
+        --chart-3: 191 100% 87%;
+        --chart-4: 82 100% 84%;
+        --chart-5: 239 100% 73%;
+        --radius: 1rem;
     }
 }
 
@@ -59,18 +60,20 @@ code {
     }
 }
 
-/* Custom utility classes matching the EduCore palette */
-.bg-canvas { background-color: #F9F8F6; }
-.bg-surface { background-color: #FFFFFF; }
-.text-forest { color: #1E3F33; }
-.bg-forest { background-color: #1E3F33; }
-.bg-forest-hover:hover { background-color: #162D24; }
-.text-terracotta { color: #E07A5F; }
-.bg-terracotta { background-color: #E07A5F; }
-.bg-terracotta-hover:hover { background-color: #D06950; }
-.bg-sage { background-color: #C2D5C4; }
-.text-sage-dark { color: #4E7A5C; }
-.border-soft { border-color: #E5E3DC; }
+/* Custom utility classes matching the SmartBatch dark palette */
+.bg-canvas { background-color: #232323; }
+.bg-surface { background-color: #2C2C2C; }
+.border-soft { border-color: #3F3F3F; }
+
+/* Marker highlight -- a coral block behind a phrase, like a highlighter stroke */
+.marker {
+    background: #F65E4B;
+    color: #0A0A0A;
+    padding: 0.08em 0.28em;
+    border-radius: 4px;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+}
 
 /* Staggered fade-in entrance animation */
 @keyframes fadeInUp {
@@ -81,16 +84,23 @@ code {
     animation: fadeInUp 0.5s ease-out both;
 }
 
-/* Grain texture overlay */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* Subtle grain texture overlay for the dark canvas */
 .grain-bg {
     background-image:
-        radial-gradient(circle at 20% 20%, rgba(30, 63, 51, 0.04) 1px, transparent 1px),
-        radial-gradient(circle at 80% 60%, rgba(224, 122, 95, 0.03) 1px, transparent 1px);
+        radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        radial-gradient(circle at 80% 60%, rgba(246, 94, 75, 0.05) 1px, transparent 1px);
     background-size: 24px 24px, 40px 40px;
 }
 
 /* Scrollbar polish */
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #E5E3DC; border-radius: 8px; }
-::-webkit-scrollbar-thumb:hover { background: #C2D5C4; }
+::-webkit-scrollbar-thumb { background: #3A3A3A; border-radius: 8px; }
+::-webkit-scrollbar-thumb:hover { background: #4A4A4A; }

@@ -32,9 +32,9 @@ export default function AdminHomework() {
       <div className="flex justify-end mb-6">
         <Dialog open={dialog} onOpenChange={setDialog}>
           <DialogTrigger asChild>
-            <Button data-testid="assign-hw-btn" className="bg-forest hover:bg-[#162D24] text-white gap-2 rounded-full"><Plus className="w-4 h-4" /> Assign homework</Button>
+            <Button data-testid="assign-hw-btn" className="bg-coral hover:bg-coral-deep text-ink gap-2 rounded-full"><Plus className="w-4 h-4" /> Assign homework</Button>
           </DialogTrigger>
-          <DialogContent className="bg-white">
+          <DialogContent>
             <DialogHeader><DialogTitle className="font-display">New homework</DialogTitle></DialogHeader>
             <div className="space-y-4 mt-2">
               <div className="space-y-1.5"><Label>Title</Label><Input data-testid="hw-title-input" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="Ch 8 — Numerical set" /></div>
@@ -46,7 +46,7 @@ export default function AdminHomework() {
               </div>
               <div className="space-y-1.5"><Label>Due date</Label><Input data-testid="hw-due-input" type="date" value={form.due} onChange={e => setForm({ ...form, due: e.target.value })} /></div>
               <div className="space-y-1.5"><Label>Description (optional)</Label><Textarea data-testid="hw-desc-input" value={form.desc} onChange={e => setForm({ ...form, desc: e.target.value })} placeholder="Detailed instructions…" /></div>
-              <Button data-testid="submit-hw-btn" onClick={assign} className="w-full bg-forest hover:bg-[#162D24] text-white">Assign to batch</Button>
+              <Button data-testid="submit-hw-btn" onClick={assign} className="w-full bg-coral hover:bg-coral-deep text-ink">Assign to batch</Button>
             </div>
           </DialogContent>
         </Dialog>
@@ -61,21 +61,21 @@ export default function AdminHomework() {
               <CardContent className="p-6">
                 <div className="flex items-start justify-between gap-4 mb-4">
                   <div>
-                    <div className="flex items-center gap-2 text-xs text-[#5C5C5C]">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <BookOpen className="w-3.5 h-3.5" /> {batch?.name}
                     </div>
-                    <div className="font-display text-lg font-semibold text-[#1C1C1C] mt-1">{h.title}</div>
-                    <div className="text-xs text-terracotta mt-1 font-semibold">Due {h.due}</div>
+                    <div className="font-display text-lg font-semibold text-foreground mt-1">{h.title}</div>
+                    <div className="text-xs text-yellow mt-1 font-semibold">Due {h.due}</div>
                   </div>
-                  <div className="text-xs text-forest inline-flex items-center gap-1.5">
+                  <div className="text-xs text-coral inline-flex items-center gap-1.5">
                     <Users className="w-3.5 h-3.5" /> {h.assigned}
                   </div>
                 </div>
-                <div className="flex items-center justify-between text-xs text-[#5C5C5C] mb-2">
+                <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
                   <span>{h.submitted} of {h.assigned} submitted</span>
-                  <span className="font-semibold text-forest">{pct}%</span>
+                  <span className="font-semibold text-coral">{pct}%</span>
                 </div>
-                <Progress value={pct} className="h-2 bg-[#F0EEE8]" />
+                <Progress value={pct} className="h-2 bg-surface-2" />
               </CardContent>
             </Card>
           );

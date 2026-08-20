@@ -20,6 +20,11 @@ class Homework(db.Model, TimestampMixin):
     due_date = db.Column(db.Date, nullable=False, index=True)
     created_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     resource_id = db.Column(db.Integer, db.ForeignKey("resources.id"), nullable=True)
+    # Nullable at the DB level (existing rows were backfilled to 100 rather
+    # than made non-nullable -- see migration), but the create schema
+    # requires it going forward. default=100 only covers rows created by
+    # code that bypasses the schema (scripts, direct ORM use).
+    max_marks = db.Column(db.Integer, nullable=True, default=100)
 
     school_class = db.relationship("SchoolClass")
     subject = db.relationship("Subject")

@@ -1,6 +1,7 @@
 from marshmallow import Schema, ValidationError, fields, validate, validates_schema
 
 from app.models.user import RoleEnum
+from app.utils.validators import INDIAN_PHONE_ERROR, INDIAN_PHONE_REGEX
 
 CREATABLE_ROLES = [RoleEnum.TEACHER.value, RoleEnum.PARENT.value, RoleEnum.STUDENT.value]
 
@@ -15,7 +16,7 @@ class SignupSchema(Schema):
     full_name = fields.String(required=True, validate=validate.Length(min=1, max=120))
     email = fields.Email(required=True)
     password = fields.String(required=True, validate=validate.Length(min=6))
-    phone = fields.String(load_default=None, allow_none=True, validate=validate.Length(max=20))
+    phone = fields.String(required=True, validate=validate.Regexp(INDIAN_PHONE_REGEX, error=INDIAN_PHONE_ERROR))
 
     # student-only
     admission_no = fields.String(load_default=None, allow_none=True, validate=validate.Length(max=30))

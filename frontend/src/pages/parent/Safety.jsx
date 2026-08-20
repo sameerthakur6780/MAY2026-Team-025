@@ -16,14 +16,14 @@ export default function ParentSafety() {
           return (
             <Card key={n.id} data-testid={`feed-${n.id}`} className="border-soft shadow-none animate-fade-in-up" style={{ animationDelay: `${i * 60}ms` }}>
               <CardContent className="p-5 flex items-start gap-4">
-                <div className={`w-11 h-11 shrink-0 rounded-xl flex items-center justify-center ${n.ok ? "bg-sage/60" : "bg-[#FDE8DC]"}`}>
-                  <Icon className={`w-5 h-5 ${n.ok ? "text-forest" : "text-terracotta"}`} />
+                <div className={`w-11 h-11 shrink-0 rounded-xl flex items-center justify-center ${n.ok ? "bg-sage/60" : "bg-yellow/25"}`}>
+                  <Icon className={`w-5 h-5 ${n.ok ? "text-ink" : "text-yellow"}`} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium text-[#1C1C1C]">{n.message}</div>
+                  <div className="text-sm font-medium text-foreground">{n.message}</div>
                   <div className="flex items-center gap-2 mt-2">
-                    <Badge className="bg-[#F0EEE8] text-[#5C5C5C] border-0 capitalize text-[10px]">{n.type}</Badge>
-                    <span className="text-xs text-[#5C5C5C]">{n.time}</span>
+                    <Badge className="bg-surface-2 text-muted-foreground border-0 capitalize text-[10px]">{n.type}</Badge>
+                    <span className="text-xs text-muted-foreground">{n.time}</span>
                   </div>
                 </div>
               </CardContent>

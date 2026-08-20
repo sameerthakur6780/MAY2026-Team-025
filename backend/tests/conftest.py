@@ -30,8 +30,23 @@ def next_id():
     return next(_id_counter)
 
 
+def default_phone():
+    """A deterministic, valid-format (10-digit, starts with 6-9) phone
+    number for tests that don't care about the actual value."""
+    return f"9{next_id():09d}"
+
+
 class TestConfig:
     TESTING = True
+    # Explicit, not just "unset": config.py's load_dotenv() pulls in the
+    # dev .env's FLASK_DEBUG=1 as a process-wide env var, and Flask's own
+    # app.debug falls back to that env var whenever DEBUG isn't set
+    # explicitly here -- without this, tests would inherit debug=True from
+    # whatever the developer's local .env happens to have, which trips
+    # notification_service.py's reloader guard (it treats debug=True as "we
+    # might be the Werkzeug reloader's parent watcher process" and skips
+    # starting the scheduler).
+    DEBUG = False
     SECRET_KEY = "test-secret"
     SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
     SQLALCHEMY_ENGINE_OPTIONS = {
@@ -66,6 +81,16 @@ class TestConfig:
     FACE_DETECTOR_BACKEND = "opencv"
     FACE_HIGH_CONFIDENCE_THRESHOLD = 0.60
     FACE_LOW_CONFIDENCE_THRESHOLD = 0.40
+
+    MAIL_DEFAULT_SENDER = "SmartBatch <no-reply@smartbatch.test>"
+    MAIL_SUPPRESS_SEND = True  # belt-and-suspenders on top of TESTING=True -- never a real SMTP call in tests
+    SCHEDULER_ENABLED = False  # no background thread per test app instance
+
+    RAZORPAY_KEY_ID = "test-key-id"
+    RAZORPAY_KEY_SECRET = "test-key-secret"
+    RAZORPAY_WEBHOOK_SECRET = "test-webhook-secret"
+    FEE_GENERATION_DAY_OF_MONTH = 25
+    FEE_DUE_DAY_OF_MONTH = 10
 
 
 class FakeStorageService:
@@ -179,12 +204,13 @@ def login_as(raw_client, email, password=PASSWORD):
 # ---------------------------------------------------------------------------
 
 
-def create_admin_user(email=None, full_name="Test Admin"):
+def create_admin_user(email=None, full_name="Test Admin", phone=None):
     email = email or f"admin{next_id()}@test.com"
     user = User(
         full_name=full_name,
         email=email,
         password_hash=bcrypt.generate_password_hash(PASSWORD).decode("utf-8"),
+        phone=phone or default_phone(),
         role=RoleEnum.ADMIN,
     )
     _db.session.add(user)
@@ -195,12 +221,18 @@ def create_admin_user(email=None, full_name="Test Admin"):
 def create_teacher(email=None, full_name="Test Teacher", phone=None):
     email = email or f"teacher{next_id()}@test.com"
     user = create_managed_account(
-        {"role": "teacher", "full_name": full_name, "email": email, "password": PASSWORD, "phone": phone}
+        {
+            "role": "teacher",
+            "full_name": full_name,
+            "email": email,
+            "password": PASSWORD,
+            "phone": phone or default_phone(),
+        }
     )
     return user.teacher
 
 
-def create_parent(email=None, full_name="Test Parent", occupation=None, address=None):
+def create_parent(email=None, full_name="Test Parent", phone=None, occupation=None, address=None):
     email = email or f"parent{next_id()}@test.com"
     user = create_managed_account(
         {
@@ -208,6 +240,7 @@ def create_parent(email=None, full_name="Test Parent", occupation=None, address=
             "full_name": full_name,
             "email": email,
             "password": PASSWORD,
+            "phone": phone or default_phone(),
             "occupation": occupation,
             "address": address,
         }
@@ -215,7 +248,7 @@ def create_parent(email=None, full_name="Test Parent", occupation=None, address=
     return user.parent
 
 
-def create_student(email=None, full_name="Test Student", admission_no=None, class_id=None, parent_id=None):
+def create_student(email=None, full_name="Test Student", phone=None, admission_no=None, class_id=None, parent_id=None):
     email = email or f"student{next_id()}@test.com"
     admission_no = admission_no or f"ADM{next_id()}"
     user = create_managed_account(
@@ -224,6 +257,7 @@ def create_student(email=None, full_name="Test Student", admission_no=None, clas
             "full_name": full_name,
             "email": email,
             "password": PASSWORD,
+            "phone": phone or default_phone(),
             "admission_no": admission_no,
             "class_id": class_id,
             "parent_id": parent_id,

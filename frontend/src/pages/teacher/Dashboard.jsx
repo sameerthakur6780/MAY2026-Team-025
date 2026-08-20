@@ -1,40 +1,18 @@
-import { useEffect, useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
+import EmptyState from "@/components/EmptyState";
 import { TEACHER_NAV } from "@/lib/navConfig";
 import { useAuth } from "@/context/AuthContext";
-import { api, ApiError } from "@/lib/apiClient";
+import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { Card, CardContent } from "@/components/ui/card";
-import { Users, GraduationCap } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Users, GraduationCap, School } from "lucide-react";
+
+const PER_PAGE_100 = { per_page: 100 };
 
 export default function TeacherDashboard() {
   const { user } = useAuth();
-  const [classes, setClasses] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    (async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        // Already scoped server-side to this teacher's assigned classes.
-        const data = await api.get("/api/classes");
-        if (!cancelled) setClasses(data.items || []);
-      } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof ApiError ? err.message : "Could not load your classes.");
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  // Already scoped server-side to this teacher's assigned classes.
+  const { items: classes, loading, error, refetch } = usePaginatedList("/api/classes", PER_PAGE_100);
 
   return (
     <DashboardLayout
@@ -46,23 +24,35 @@ export default function TeacherDashboard() {
         <CardContent className="p-6">
           <div className="flex items-center justify-between mb-5">
             <div>
-              <div className="text-xs tracking-[0.2em] uppercase font-bold text-[#5C5C5C]">Your batches</div>
+              <div className="text-xs tracking-[0.2em] uppercase font-bold text-muted-foreground">Your batches</div>
               <div className="font-display text-xl font-semibold mt-1">Assigned classes</div>
             </div>
           </div>
 
-          {loading && <div className="text-sm text-[#5C5C5C]" data-testid="teacher-classes-loading">Loading your classes...</div>}
+          {loading && (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4" data-testid="teacher-classes-loading">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} className="h-[72px] w-full rounded-xl" />
+              ))}
+            </div>
+          )}
 
           {!loading && error && (
-            <div className="text-sm text-terracotta" data-testid="teacher-classes-error">
-              {error}
+            <div className="text-sm text-coral py-6" data-testid="teacher-classes-error">
+              Couldn't load your classes: {error}{" "}
+              <button className="underline font-semibold" onClick={refetch}>
+                Retry
+              </button>
             </div>
           )}
 
           {!loading && !error && classes.length === 0 && (
-            <div className="text-sm text-[#5C5C5C]" data-testid="teacher-classes-empty">
-              You don't have any classes assigned yet.
-            </div>
+            <EmptyState
+              icon={School}
+              title="No classes yet"
+              description="You don't have any classes assigned yet."
+              data-testid="teacher-classes-empty"
+            />
           )}
 
           {!loading && !error && classes.length > 0 && (
@@ -70,11 +60,11 @@ export default function TeacherDashboard() {
               {classes.map((c) => (
                 <div key={c.id} className="p-4 rounded-xl border border-soft flex items-center gap-4">
                   <div className="w-10 h-10 rounded-lg bg-sage/60 flex items-center justify-center shrink-0">
-                    <GraduationCap className="w-5 h-5 text-forest" />
+                    <GraduationCap className="w-5 h-5 text-ink" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium">Grade {c.grade}</div>
-                    <div className="text-xs text-[#5C5C5C] mt-0.5 flex items-center gap-1">
+                    <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
                       <Users className="w-3 h-3" /> {c.student_count} student{c.student_count === 1 ? "" : "s"}
                     </div>
                   </div>

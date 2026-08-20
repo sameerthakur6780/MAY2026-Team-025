@@ -1,17 +1,19 @@
 from flask import Flask, jsonify
 
-from config import Config
-from app.extensions import bcrypt, cors, db, jwt, limiter, migrate
+from config import Config, validate_mail_config
+from app.extensions import bcrypt, cors, db, jwt, limiter, mail, migrate
 
 
 def create_app(config_class=Config):
     app = Flask(__name__, instance_relative_config=True)
     app.config.from_object(config_class)
+    validate_mail_config(app)
 
     db.init_app(app)
     migrate.init_app(app, db)
     bcrypt.init_app(app)
     jwt.init_app(app)
+    mail.init_app(app)
     cors.init_app(
         app,
         resources={r"/api/*": {"origins": app.config["FRONTEND_ORIGINS"]}},
@@ -37,14 +39,18 @@ def create_app(config_class=Config):
 
     from app.utils import jwt_callbacks  # noqa: F401  registers JWT loader callbacks
 
+    from app.routes.analytics import analytics_bp
     from app.routes.assignments import assignments_bp
     from app.routes.attendance import attendance_bp
     from app.routes.auth import auth_bp
     from app.routes.classes import classes_bp
+    from app.routes.fee_plans import fee_plans_bp
+    from app.routes.fees import fees_bp
     from app.routes.health import health_bp
     from app.routes.homework import homework_bp
     from app.routes.homework_submissions import homework_submissions_bp
     from app.routes.parents import parents_bp
+    from app.routes.payments import payments_bp
     from app.routes.resources import resources_bp
     from app.routes.students import students_bp
     from app.routes.subjects import subjects_bp
@@ -66,10 +72,21 @@ def create_app(config_class=Config):
     app.register_blueprint(homework_submissions_bp)
     app.register_blueprint(tests_bp)
     app.register_blueprint(test_submissions_bp)
+    app.register_blueprint(analytics_bp)
+    app.register_blueprint(fee_plans_bp)
+    app.register_blueprint(fees_bp)
+    app.register_blueprint(payments_bp)
 
-    from app.cli import create_admin
+    from app.cli import create_admin, send_test_email
     app.cli.add_command(create_admin)
+    app.cli.add_command(send_test_email)
 
     from app import models  # noqa: F401  registers models with SQLAlchemy metadata
+
+    from app.services.notification_service import init_scheduler
+    init_scheduler(app)
+
+    from app.services.fee_service import init_fee_scheduler
+    init_fee_scheduler(app)
 
     return app

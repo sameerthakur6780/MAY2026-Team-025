@@ -61,10 +61,10 @@ export default function AdminClasses() {
         <CardContent className="p-6">
           <div className="flex items-center justify-between mb-5">
             <div>
-              <div className="text-xs tracking-[0.2em] uppercase font-bold text-[#5C5C5C]">Batches</div>
+              <div className="text-xs tracking-[0.2em] uppercase font-bold text-muted-foreground">Batches</div>
               <div className="font-display text-xl font-semibold mt-1">All classes</div>
             </div>
-            <Button data-testid="add-class-btn" onClick={openCreate} className="bg-forest hover:bg-[#162D24] text-white">
+            <Button data-testid="add-class-btn" onClick={openCreate} className="bg-coral hover:bg-coral-deep text-ink">
               <Plus className="w-4 h-4" /> Add Class
             </Button>
           </div>
@@ -78,7 +78,7 @@ export default function AdminClasses() {
           )}
 
           {!loading && error && (
-            <div className="text-sm text-terracotta py-6" data-testid="classes-error">
+            <div className="text-sm text-coral py-6" data-testid="classes-error">
               Couldn't load classes: {error}{" "}
               <button className="underline font-semibold" onClick={refetch}>
                 Retry
@@ -92,7 +92,7 @@ export default function AdminClasses() {
               title="No classes yet"
               description="Add a class for each grade you're running."
               action={
-                <Button onClick={openCreate} className="bg-forest hover:bg-[#162D24] text-white">
+                <Button onClick={openCreate} className="bg-coral hover:bg-coral-deep text-ink">
                   <Plus className="w-4 h-4" /> Add Class
                 </Button>
               }
@@ -143,7 +143,7 @@ export default function AdminClasses() {
               <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={submitting} className="bg-forest hover:bg-[#162D24] text-white">
+              <Button type="submit" disabled={submitting} className="bg-coral hover:bg-coral-deep text-ink">
                 {submitting ? "Saving..." : editing ? "Save changes" : "Create class"}
               </Button>
             </DialogFooter>

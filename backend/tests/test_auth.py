@@ -13,7 +13,7 @@ def test_login_success_sets_cookies_and_returns_profile(client):
     resp = client.post("/api/auth/login", json={"email": user.email, "password": PASSWORD})
     assert resp.status_code == 200
     body = resp.get_json()
-    assert body == {"id": user.id, "full_name": user.full_name, "email": user.email, "role": "admin", "phone": None}
+    assert body == {"id": user.id, "full_name": user.full_name, "email": user.email, "role": "admin", "phone": user.phone}
     set_cookie_headers = resp.headers.getlist("Set-Cookie")
     assert any("access_token_cookie" in h for h in set_cookie_headers)
     assert any("csrf_access_token" in h for h in set_cookie_headers)
@@ -161,7 +161,13 @@ def test_signup_forbidden_for_non_admin_roles(teacher):
 def test_signup_creates_teacher_account(admin):
     resp = admin.post(
         "/api/auth/signup",
-        json={"role": "teacher", "full_name": "New Teacher", "email": "newteacher@test.com", "password": PASSWORD},
+        json={
+            "role": "teacher",
+            "full_name": "New Teacher",
+            "email": "newteacher@test.com",
+            "password": PASSWORD,
+            "phone": "9876543210",
+        },
     )
     assert resp.status_code == 201
     body = resp.get_json()
@@ -178,6 +184,7 @@ def test_signup_creates_parent_account(admin):
             "full_name": "New Parent",
             "email": "newparent@test.com",
             "password": PASSWORD,
+            "phone": "9876543211",
             "occupation": "Engineer",
         },
     )
@@ -193,6 +200,7 @@ def test_signup_creates_student_account_with_admission_no(admin):
             "full_name": "New Student",
             "email": "newstudent@test.com",
             "password": PASSWORD,
+            "phone": "9876543212",
             "admission_no": "ADM-1001",
         },
     )
@@ -200,10 +208,33 @@ def test_signup_creates_student_account_with_admission_no(admin):
     assert resp.get_json()["role"] == "student"
 
 
+def test_signup_invalid_phone_format_is_validation_error(admin):
+    resp = admin.post(
+        "/api/auth/signup",
+        json={
+            "role": "teacher",
+            "full_name": "Bad Phone",
+            "email": "badphone@test.com",
+            "password": PASSWORD,
+            "phone": "12345",
+        },
+    )
+    assert resp.status_code == 400
+    body = resp.get_json()
+    assert body["error"] == "validation_error"
+    assert "phone" in body["message"]
+
+
 def test_signup_student_without_admission_no_is_validation_error(admin):
     resp = admin.post(
         "/api/auth/signup",
-        json={"role": "student", "full_name": "No Admission", "email": "noadm@test.com", "password": PASSWORD},
+        json={
+            "role": "student",
+            "full_name": "No Admission",
+            "email": "noadm@test.com",
+            "password": PASSWORD,
+            "phone": "9876543214",
+        },
     )
     assert resp.status_code == 400
     body = resp.get_json()
@@ -247,7 +278,13 @@ def test_signup_duplicate_email_is_conflict(admin):
     create_teacher(email="dupe@test.com")
     resp = admin.post(
         "/api/auth/signup",
-        json={"role": "parent", "full_name": "Dup Parent", "email": "dupe@test.com", "password": PASSWORD},
+        json={
+            "role": "parent",
+            "full_name": "Dup Parent",
+            "email": "dupe@test.com",
+            "password": PASSWORD,
+            "phone": "9876543213",
+        },
     )
     assert resp.status_code == 409
     assert resp.get_json()["error"] == "email_taken"

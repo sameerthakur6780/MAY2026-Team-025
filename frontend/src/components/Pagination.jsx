@@ -6,7 +6,7 @@ export default function Pagination({ page, pages, total, onPageChange }) {
 
   return (
     <div className="flex items-center justify-between pt-4 mt-2 border-t border-soft">
-      <div className="text-xs text-[#5C5C5C]">
+      <div className="text-xs text-muted-foreground">
         Page {page} of {pages || 1} &middot; {total} total
       </div>
       <div className="flex items-center gap-2">

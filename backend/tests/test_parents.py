@@ -52,6 +52,7 @@ def test_create_parent_success(admin):
             "full_name": "New Parent",
             "email": "newparent2@test.com",
             "password": "Password123",
+            "phone": "9876543210",
             "occupation": "Doctor",
             "address": "123 Main St",
         },
@@ -73,7 +74,13 @@ def test_create_parent_missing_fields_validation_error(admin):
 def test_create_parent_duplicate_email_conflict(admin):
     create_parent(email="dupparent@test.com")
     resp = admin.post(
-        "/api/parents", json={"full_name": "Dup", "email": "dupparent@test.com", "password": "Password123"}
+        "/api/parents",
+        json={
+            "full_name": "Dup",
+            "email": "dupparent@test.com",
+            "password": "Password123",
+            "phone": "9876543211",
+        },
     )
     assert resp.status_code == 409
     assert resp.get_json()["error"] == "email_taken"

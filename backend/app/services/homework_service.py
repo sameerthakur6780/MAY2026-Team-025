@@ -1,11 +1,17 @@
+import logging
+
 from sqlalchemy import false
 
 from app.extensions import db
 from app.models.academic import SchoolClass, Subject
 from app.models.homework import Homework
 from app.models.resource import Resource
+from app.models.student import Student
+from app.services.notification_service import NotificationService
 from app.utils.errors import ApiError, forbidden, not_found
 from app.utils.scoping import current_parent, current_student, current_teacher, teacher_class_ids
+
+logger = logging.getLogger(__name__)
 
 
 def serialize_homework(homework):
@@ -21,6 +27,7 @@ def serialize_homework(homework):
         "created_by": homework.created_by,
         "creator_name": homework.creator.full_name,
         "resource_id": homework.resource_id,
+        "max_marks": homework.max_marks,
         "created_at": homework.created_at.isoformat(),
         "updated_at": homework.updated_at.isoformat(),
     }
@@ -58,9 +65,21 @@ def create_homework(data, created_by):
         due_date=data["due_date"],
         created_by=created_by,
         resource_id=data.get("resource_id"),
+        max_marks=data["max_marks"],
     )
     db.session.add(homework)
     db.session.commit()
+
+    try:
+        student_ids = [
+            row[0] for row in Student.query.with_entities(Student.id).filter_by(class_id=homework.class_id).all()
+        ]
+        NotificationService.notify_homework_assigned(homework, student_ids)
+    except Exception:
+        # Best-effort -- homework creation already succeeded and committed;
+        # a notification problem must not surface as a failed creation.
+        logger.exception("Failed to schedule homework_assigned notifications for homework %s", homework.id)
+
     return homework
 
 
@@ -75,7 +94,7 @@ def update_homework(homework_id, data):
         effective_class_id = data.get("class_id", homework.class_id)
         _validate_resource_for_class(data["resource_id"], effective_class_id)
 
-    for field in ("class_id", "subject_id", "title", "description", "due_date", "resource_id"):
+    for field in ("class_id", "subject_id", "title", "description", "due_date", "resource_id", "max_marks"):
         if field in data:
             value = data[field]
             if field == "title" and value:

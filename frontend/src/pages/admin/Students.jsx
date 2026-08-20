@@ -22,9 +22,9 @@ const NONE = "none";
 
 function StatusBadge({ status }) {
   const styles = {
-    active: "bg-sage/60 text-forest border-0",
-    inactive: "bg-[#F0EEE8] text-[#5C5C5C] border-0",
-    withdrawn: "bg-terracotta/10 text-terracotta border-0",
+    active: "bg-lime text-ink border-0",
+    inactive: "bg-surface-2 text-muted-foreground border-0",
+    withdrawn: "bg-coral text-ink border-0",
   };
   return <Badge className={styles[status] || styles.inactive}>{status}</Badge>;
 }
@@ -53,8 +53,8 @@ export default function AdminStudents() {
   const [parents, setParents] = useState([]);
 
   useEffect(() => {
-    api.get("/api/classes?per_page=100").then((d) => setClasses(d.items)).catch(() => {});
-    api.get("/api/parents?per_page=100").then((d) => setParents(d.items)).catch(() => {});
+    api.get("/api/classes?per_page=100").then((d) => setClasses(d.items)).catch(() => toast.error("Couldn't load the class list."));
+    api.get("/api/parents?per_page=100").then((d) => setParents(d.items)).catch(() => toast.error("Couldn't load the parent list."));
   }, []);
 
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -137,7 +137,7 @@ export default function AdminStudents() {
           <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
             <div className="flex items-center gap-3">
               <div>
-                <div className="text-xs tracking-[0.2em] uppercase font-bold text-[#5C5C5C]">Roster</div>
+                <div className="text-xs tracking-[0.2em] uppercase font-bold text-muted-foreground">Roster</div>
                 <div className="font-display text-xl font-semibold mt-1">All students</div>
               </div>
             </div>
@@ -155,7 +155,7 @@ export default function AdminStudents() {
                   ))}
                 </SelectContent>
               </Select>
-              <Button data-testid="add-student-btn" onClick={openCreate} className="bg-forest hover:bg-[#162D24] text-white">
+              <Button data-testid="add-student-btn" onClick={openCreate} className="bg-coral hover:bg-coral-deep text-ink">
                 <Plus className="w-4 h-4" /> Add Student
               </Button>
             </div>
@@ -170,7 +170,7 @@ export default function AdminStudents() {
           )}
 
           {!loading && error && (
-            <div className="text-sm text-terracotta py-6" data-testid="students-error">
+            <div className="text-sm text-coral py-6" data-testid="students-error">
               Couldn't load students: {error}{" "}
               <button className="underline font-semibold" onClick={refetch}>
                 Retry
@@ -184,7 +184,7 @@ export default function AdminStudents() {
               title="No students yet"
               description="Add your first student to get started."
               action={
-                <Button onClick={openCreate} className="bg-forest hover:bg-[#162D24] text-white">
+                <Button onClick={openCreate} className="bg-coral hover:bg-coral-deep text-ink">
                   <Plus className="w-4 h-4" /> Add Student
                 </Button>
               }
@@ -209,15 +209,15 @@ export default function AdminStudents() {
                     <TableRow key={s.id} data-testid={`student-row-${s.id}`}>
                       <TableCell>
                         <div className="font-medium">{s.full_name}</div>
-                        <div className="text-xs text-[#5C5C5C]">{s.email}</div>
+                        <div className="text-xs text-muted-foreground">{s.email}</div>
                       </TableCell>
                       <TableCell>{s.admission_no}</TableCell>
-                      <TableCell>{s.grade ? `Grade ${s.grade}` : <span className="text-[#5C5C5C]">Unassigned</span>}</TableCell>
+                      <TableCell>{s.grade ? `Grade ${s.grade}` : <span className="text-muted-foreground">Unassigned</span>}</TableCell>
                       <TableCell>
                         {s.parent_id ? (
                           parents.find((p) => p.id === s.parent_id)?.full_name || `#${s.parent_id}`
                         ) : (
-                          <span className="text-[#5C5C5C]">None</span>
+                          <span className="text-muted-foreground">None</span>
                         )}
                       </TableCell>
                       <TableCell>
@@ -228,7 +228,7 @@ export default function AdminStudents() {
                           <Pencil className="w-4 h-4" />
                         </Button>
                         <Button variant="ghost" size="icon" data-testid={`delete-student-${s.id}`} onClick={() => setDeleteTarget(s)}>
-                          <Trash2 className="w-4 h-4 text-terracotta" />
+                          <Trash2 className="w-4 h-4 text-coral" />
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -262,7 +262,7 @@ export default function AdminStudents() {
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <Label>Password</Label>
-                    <Input required type="password" placeholder="At least 6 characters" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+                    <Input required type="password" minLength={6} title="At least 6 characters" placeholder="At least 6 characters" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
                   </div>
                   <div className="space-y-1.5">
                     <Label>Phone</Label>
@@ -272,9 +272,9 @@ export default function AdminStudents() {
               </>
             )}
             {editing && (
-              <div className="p-3 rounded-lg bg-[#F7F5F0] text-sm">
+              <div className="p-3 rounded-lg bg-surface-2 text-sm">
                 <div className="font-medium">{editing.full_name}</div>
-                <div className="text-xs text-[#5C5C5C]">{editing.email}</div>
+                <div className="text-xs text-muted-foreground">{editing.email}</div>
               </div>
             )}
             <div className="grid grid-cols-2 gap-3">
@@ -346,7 +346,7 @@ export default function AdminStudents() {
               <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={submitting} className="bg-forest hover:bg-[#162D24] text-white">
+              <Button type="submit" disabled={submitting} className="bg-coral hover:bg-coral-deep text-ink">
                 {submitting ? "Saving..." : editing ? "Save changes" : "Create student"}
               </Button>
             </DialogFooter>
