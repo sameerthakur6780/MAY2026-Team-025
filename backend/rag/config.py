@@ -3,7 +3,6 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass, field
 from functools import lru_cache
-from urllib.parse import quote, urlparse
 
 from dotenv import load_dotenv
 
@@ -13,32 +12,6 @@ load_dotenv(os.path.join(BASE_DIR, ".env"))
 
 def _env(name: str, default: str = "") -> str:
     return os.environ.get(name, default)
-
-
-def _supabase_project_ref(project_url: str) -> str:
-    host = urlparse(project_url).hostname or ""
-    return host.split(".", 1)[0] if host.endswith(".supabase.co") else ""
-
-
-def _database_url() -> str:
-    explicit_url = _env("RAG_DATABASE_URL").strip()
-    if explicit_url:
-        return explicit_url
-
-    project_ref = _supabase_project_ref(_env("PROJECT_URL"))
-    db_password = _env("DB_PASSWORD").strip()
-    if not project_ref or not db_password:
-        return ""
-
-    quoted_password = quote(db_password, safe="")
-    pooler_host = _env("SUPABASE_DB_POOLER_HOST").strip()
-    pooler_region = _env("SUPABASE_DB_REGION").strip()
-    if not pooler_host and pooler_region:
-        pooler_host = f"aws-0-{pooler_region}.pooler.supabase.com"
-    if pooler_host:
-        return f"postgresql://postgres.{project_ref}:{quoted_password}@{pooler_host}:6543/postgres"
-
-    return f"postgresql://postgres:{quoted_password}@db.{project_ref}.supabase.co:5432/postgres"
 
 
 def _int_env(name: str, default: int) -> int:
@@ -64,7 +37,18 @@ def _bool_env(name: str, default: bool = False) -> bool:
 
 @dataclass(frozen=True)
 class RagConfig:
-    database_url: str = field(default_factory=_database_url)
+    pinecone_api_key: str = field(default_factory=lambda: _env("PINECONE_API_KEY"))
+    pinecone_dense_index: str = field(
+        default_factory=lambda: _env("PINECONE_DENSE_INDEX", "smartbatch-rag-dense")
+    )
+    pinecone_sparse_index: str = field(
+        default_factory=lambda: _env("PINECONE_SPARSE_INDEX", "smartbatch-rag-sparse")
+    )
+    pinecone_cloud: str = field(default_factory=lambda: _env("PINECONE_CLOUD", "aws"))
+    pinecone_region: str = field(default_factory=lambda: _env("PINECONE_REGION", "us-east-1"))
+    pinecone_sparse_model: str = field(
+        default_factory=lambda: _env("PINECONE_SPARSE_MODEL", "pinecone-sparse-english-v0")
+    )
     gemini_api_key: str = field(default_factory=lambda: _env("GEMINI_API_KEY"))
     groq_api_key: str = field(default_factory=lambda: _env("GROQ_API_KEY"))
     openrouter_api_key: str = field(default_factory=lambda: _env("OPENROUTER_API_KEY"))

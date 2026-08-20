@@ -13,7 +13,17 @@ sys.path.insert(0, str(BACKEND_ROOT))
 from rag.pipeline.ingest import ingest_pdf_file
 from rag.pipeline.query import answer_question
 from rag.schemas import QueryRequest
-from rag.store.supabase_store import RagStoreError
+from rag.store.pinecone_store import RagStoreError, ensure_indexes
+
+
+def cmd_init_store(_args: argparse.Namespace) -> int:
+    try:
+        ensure_indexes()
+    except RagStoreError as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+    print("Pinecone indexes are ready.")
+    return 0
 
 
 def cmd_ingest(args: argparse.Namespace) -> int:
@@ -78,6 +88,9 @@ def main() -> None:
     ingest_parser.add_argument("--title", default="Untitled")
     ingest_parser.add_argument("--force", action="store_true")
     ingest_parser.set_defaults(func=cmd_ingest)
+
+    init_store_parser = subparsers.add_parser("init-store", help="Create Pinecone indexes if missing")
+    init_store_parser.set_defaults(func=cmd_init_store)
 
     eval_parser = subparsers.add_parser("eval", help="Run retrieval eval JSON")
     eval_parser.add_argument("file", type=Path, help="Path to eval JSON")

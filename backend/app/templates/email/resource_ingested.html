@@ -1,0 +1,14 @@
+{% extends "email/base.html" %}
+{% block title %}Resource indexed{% endblock %}
+{% block content %}
+<p>Hi {{ recipient_name }},</p>
+<p>
+  Your resource <strong>{{ filename }}</strong> has been successfully processed for the AI assistant.
+</p>
+{% if skipped %}
+<p>It was already up to date, so no re-indexing was needed.</p>
+{% else %}
+<p>{{ chunks_indexed }} chunk(s) were indexed and are now searchable by students.</p>
+{% endif %}
+<p>Thank you!</p>
+{% endblock %}

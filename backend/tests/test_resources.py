@@ -142,6 +142,107 @@ def test_upload_nonexistent_subject_not_found(admin):
 
 
 # ---------------------------------------------------------------------------
+# Admin PDF upload -> automatic RAG ingestion + success email
+# ---------------------------------------------------------------------------
+
+
+def test_admin_pdf_upload_triggers_ingestion_and_success_email(admin, monkeypatch):
+    from app.extensions import mail
+    from app.services import assistant_service
+    from rag.schemas import IngestResult
+
+    monkeypatch.setattr(
+        assistant_service,
+        "ingest_resource_pdf",
+        lambda resource_id, force=False: IngestResult(
+            book_id="book-1", pdf_hash="hash", chunks_indexed=5, skipped=False, message="Indexed 5 chunks"
+        ),
+    )
+
+    school_class = create_class(1)
+    subject = create_subject("Physics")
+    with mail.record_messages() as outbox:
+        resp = _upload(admin, school_class, subject, filename="physics.pdf", rtype="pdf")
+
+    assert resp.status_code == 201
+    assert len(outbox) == 1
+    sent = outbox[0]
+    assert sent.subject == "Resource indexed for the AI assistant"
+    assert "physics.pdf" in sent.body
+    assert "5 chunk" in sent.body
+
+
+def test_admin_pdf_upload_skipped_ingestion_still_emails(admin, monkeypatch):
+    from app.extensions import mail
+    from app.services import assistant_service
+    from rag.schemas import IngestResult
+
+    monkeypatch.setattr(
+        assistant_service,
+        "ingest_resource_pdf",
+        lambda resource_id, force=False: IngestResult(
+            book_id="book-1", pdf_hash="hash", chunks_indexed=0, skipped=True, message="PDF unchanged; skipped"
+        ),
+    )
+
+    school_class = create_class(1)
+    subject = create_subject("Physics")
+    with mail.record_messages() as outbox:
+        resp = _upload(admin, school_class, subject, filename="physics.pdf", rtype="pdf")
+
+    assert resp.status_code == 201
+    assert len(outbox) == 1
+    assert "already up to date" in outbox[0].body
+
+
+def test_admin_pdf_ingestion_failure_does_not_send_email(admin, monkeypatch):
+    from app.extensions import mail
+    from app.services import assistant_service
+
+    def boom(resource_id, force=False):
+        raise RuntimeError("Pinecone unavailable")
+
+    monkeypatch.setattr(assistant_service, "ingest_resource_pdf", boom)
+
+    school_class = create_class(1)
+    subject = create_subject("Physics")
+    with mail.record_messages() as outbox:
+        resp = _upload(admin, school_class, subject, filename="physics.pdf", rtype="pdf")
+
+    assert resp.status_code == 201  # upload itself still succeeds
+    assert outbox == []
+
+
+def test_teacher_pdf_upload_does_not_trigger_ingestion(teacher, monkeypatch):
+    from app.services import assistant_service
+
+    def fail_if_called(resource_id, force=False):
+        raise AssertionError("teacher uploads must not auto-trigger ingestion")
+
+    monkeypatch.setattr(assistant_service, "ingest_resource_pdf", fail_if_called)
+
+    authed, _ = teacher
+    school_class = create_class(1)
+    subject = create_subject("Physics")
+    resp = _upload(authed, school_class, subject, filename="physics.pdf", rtype="pdf")
+    assert resp.status_code == 201
+
+
+def test_admin_non_pdf_upload_does_not_trigger_ingestion(admin, monkeypatch):
+    from app.services import assistant_service
+
+    def fail_if_called(resource_id, force=False):
+        raise AssertionError("note uploads must not auto-trigger ingestion")
+
+    monkeypatch.setattr(assistant_service, "ingest_resource_pdf", fail_if_called)
+
+    school_class = create_class(1)
+    subject = create_subject("Physics")
+    resp = _upload(admin, school_class, subject, filename="notes.pdf", rtype="note")
+    assert resp.status_code == 201
+
+
+# ---------------------------------------------------------------------------
 # GET /api/resources (list, role-scoped) and /{id}, /{id}/download
 # ---------------------------------------------------------------------------
 

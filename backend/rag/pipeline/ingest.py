@@ -6,7 +6,7 @@ from rag.chunking.chunker import chunk_blocks
 from rag.embedding.gemini_embedder import embed_texts
 from rag.extraction.pdf_extractor import extract_pdf
 from rag.schemas import IngestResult
-from rag.store.supabase_store import (
+from rag.store.pinecone_store import (
     create_book,
     delete_book_chunks,
     get_book_by_hash,

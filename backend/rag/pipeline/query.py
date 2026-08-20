@@ -9,14 +9,14 @@ from rag.config import get_rag_config
 from rag.embedding.gemini_embedder import embed_query
 from rag.generation.answer_generator import generate_answer, rewrite_query
 from rag.schemas import QueryRequest, QueryResponse, RagAnswer
-from rag.store.supabase_store import RagStoreError, hybrid_search, keyword_search
+from rag.store.pinecone_store import RagStoreError, hybrid_search, keyword_search
 
 logger = logging.getLogger(__name__)
 
 
 def answer_question(request: QueryRequest) -> QueryResponse:
     cfg = get_rag_config()
-    if not cfg.database_url:
+    if not cfg.pinecone_api_key:
         return QueryResponse(
             answer=(
                 "The textbook assistant is not fully configured yet. Please ask your "

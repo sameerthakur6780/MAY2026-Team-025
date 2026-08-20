@@ -1,3 +1,5 @@
+import logging
+import threading
 import uuid
 from pathlib import Path
 
@@ -10,9 +12,12 @@ from app.models.academic import SchoolClass, Subject
 from app.models.homework import Homework
 from app.models.resource import Resource, ResourceType
 from app.models.test import Test
+from app.services.email import send_email
 from app.services.storage import get_storage_service
 from app.utils.errors import ApiError, forbidden, not_found
 from app.utils.scoping import current_parent, current_student, current_teacher, teacher_class_ids
+
+logger = logging.getLogger(__name__)
 
 
 def serialize_resource(resource):
@@ -78,6 +83,51 @@ def create_resource(file_storage, resource_type, subject_id, class_id, uploaded_
     db.session.add(resource)
     db.session.commit()
     return resource
+
+
+def _run_ingestion_and_notify(app, resource_id, notify_email, notify_name):
+    with app.app_context():
+        # Local import: assistant_service pulls in the rag package (Gemini/
+        # Pinecone clients), which we don't want loaded for every request
+        # that merely imports resource_service.
+        from app.services.assistant_service import ingest_resource_pdf
+
+        try:
+            result = ingest_resource_pdf(resource_id)
+        except Exception:
+            # Best-effort, fire-and-forget job -- nothing is waiting on this,
+            # so log and move on rather than raise on a background thread
+            # where nothing would catch it (see email.py's send_email).
+            logger.exception("Automatic ingestion failed for resource %s", resource_id)
+            return
+
+        resource = Resource.query.get(resource_id)
+        send_email(
+            notify_email,
+            "Resource indexed for the AI assistant",
+            "resource_ingested",
+            recipient_name=notify_name,
+            filename=resource.filename if resource else "your uploaded file",
+            chunks_indexed=result.chunks_indexed,
+            skipped=result.skipped,
+        )
+
+
+def queue_pdf_ingestion(resource, notify_email, notify_name):
+    """Fire-and-forget: indexes `resource` into the RAG store off-thread, then
+    emails `notify_email` on success. Mirrors send_email()'s background-thread
+    pattern so the upload request doesn't wait on Gemini embeddings + Pinecone
+    writes; runs synchronously under TESTING for the same determinism reason.
+    """
+    app = current_app._get_current_object()
+    if app.testing:
+        _run_ingestion_and_notify(app, resource.id, notify_email, notify_name)
+    else:
+        threading.Thread(
+            target=_run_ingestion_and_notify,
+            args=(app, resource.id, notify_email, notify_name),
+            daemon=True,
+        ).start()
 
 
 def _scoped_query(role):

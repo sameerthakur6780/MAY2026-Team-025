@@ -15,7 +15,7 @@ from rag.cache.redis_cache import cache_stats
 from rag.pipeline.ingest import ingest_pdf_bytes
 from rag.pipeline.query import answer_question
 from rag.schemas import IngestResult, QueryRequest, QueryResponse
-from rag.store.supabase_store import RagStoreError
+from rag.store.pinecone_store import RagStoreError
 
 app = FastAPI(title="SmartBatch RAG Service", version="1.0.0")
 app.add_middleware(

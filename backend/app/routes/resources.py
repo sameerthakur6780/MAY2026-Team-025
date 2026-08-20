@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify, request
 from flask_jwt_extended import current_user, get_jwt
 from marshmallow import ValidationError
 
+from app.models.resource import ResourceType
 from app.schemas.resource_schema import ResourceUploadSchema
 from app.services.resource_service import (
     create_resource,
@@ -9,6 +10,7 @@ from app.services.resource_service import (
     get_download_url,
     get_resource_scoped,
     list_resources_query,
+    queue_pdf_ingestion,
     serialize_resource,
 )
 from app.utils.decorators import role_required
@@ -72,6 +74,13 @@ def upload_resource():
 
     file_storage = request.files.get("file")
     resource = create_resource(file_storage, data["type"], data["subject_id"], data["class_id"], current_user.id)
+
+    # Admin-uploaded PDFs feed the student AI assistant directly -- index them
+    # automatically instead of requiring a separate manual ingest call, then
+    # email the uploading admin once indexing finishes (see resource_service).
+    if get_jwt()["role"] == "admin" and resource.type == ResourceType.PDF:
+        queue_pdf_ingestion(resource, current_user.email, current_user.full_name)
+
     return jsonify(serialize_resource(resource)), 201
 
 

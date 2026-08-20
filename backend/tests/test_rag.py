@@ -1,10 +1,9 @@
 import rag.cache.redis_cache as redis_cache
-import rag.config as rag_config
 import rag.embedding.gemini_embedder as gemini_embedder
 import rag.extraction.pdf_extractor as pdf_extractor
 import rag.generation.answer_generator as answer_generator
 import rag.pipeline.query as query_pipeline
-import rag.store.supabase_store as supabase_store
+import rag.store.pinecone_store as pinecone_store
 from app.services import assistant_service
 from rag.chunking.chunker import chunk_blocks
 from pdfplumber.utils.exceptions import PdfminerException
@@ -73,8 +72,9 @@ def test_truncate_excerpt_stops_at_sentence_boundary():
 
 
 def test_retrieval_excludes_exercise_and_reference_content():
-    assert "reference" in supabase_store._GROUNDING_CONTENT_FILTER
-    assert "exercise" in supabase_store._GROUNDING_CONTENT_FILTER
+    content_filter = pinecone_store._GROUNDING_FILTER["content_type"]
+    assert "reference" in content_filter["$nin"]
+    assert "exercise" in content_filter["$nin"]
 
 
 def test_ask_assistant_profile_only(monkeypatch):
@@ -212,8 +212,8 @@ def test_chunk_blocks_deduplicates_and_skips_reference():
     assert chunks[0].grade == 9
 
 
-def test_answer_question_without_database_url(monkeypatch):
-    monkeypatch.setattr(query_pipeline, "get_rag_config", lambda: type("Config", (), {"database_url": ""})())
+def test_answer_question_without_pinecone_api_key(monkeypatch):
+    monkeypatch.setattr(query_pipeline, "get_rag_config", lambda: type("Config", (), {"pinecone_api_key": ""})())
 
     request = QueryRequest(query="What is velocity?", grade=9, subject="Physics")
     response = answer_question(request)
@@ -221,46 +221,55 @@ def test_answer_question_without_database_url(monkeypatch):
     assert response.model_used == "none"
 
 
-def test_rag_database_url_derives_from_supabase_config(monkeypatch):
-    monkeypatch.delenv("RAG_DATABASE_URL", raising=False)
-    monkeypatch.delenv("SUPABASE_DB_POOLER_HOST", raising=False)
-    monkeypatch.delenv("SUPABASE_DB_REGION", raising=False)
-    monkeypatch.setenv("PROJECT_URL", "https://project-ref.supabase.co")
-    monkeypatch.setenv("DB_PASSWORD", "pass word")
-    rag_config.get_rag_config.cache_clear()
+def test_rrf_fusion_prefers_chunks_present_in_both_lists():
+    dense_hits = [
+        {"chunk_id": "a", "content": "alpha", "parent_id": ""},
+        {"chunk_id": "b", "content": "beta", "parent_id": ""},
+    ]
+    sparse_hits = [
+        {"chunk_id": "b", "content": "beta", "parent_id": ""},
+        {"chunk_id": "c", "content": "gamma", "parent_id": ""},
+    ]
+    fused = pinecone_store._rrf_fuse(dense_hits, sparse_hits, rrf_k=60, limit=2)
+    assert [hit["chunk_id"] for hit in fused] == ["b", "a"]
 
-    cfg = rag_config.get_rag_config()
 
-    assert cfg.database_url == "postgresql://postgres:pass%20word@db.project-ref.supabase.co:5432/postgres"
-    rag_config.get_rag_config.cache_clear()
+def test_chapter_matches_is_case_insensitive_substring():
+    assert pinecone_store._chapter_matches("motion", {"chapter": "Laws of Motion"})
+    assert not pinecone_store._chapter_matches("thermo", {"chapter": "Laws of Motion"})
 
 
-def test_rag_database_url_can_use_supabase_pooler_region(monkeypatch):
-    monkeypatch.delenv("RAG_DATABASE_URL", raising=False)
-    monkeypatch.setenv("PROJECT_URL", "https://project-ref.supabase.co")
-    monkeypatch.setenv("DB_PASSWORD", "pass word")
-    monkeypatch.setenv("SUPABASE_DB_REGION", "ap-south-1")
-    rag_config.get_rag_config.cache_clear()
+def test_hybrid_search_applies_chapter_filter(monkeypatch):
+    cfg = type("Config", (), {"retrieval_top_k": 2, "hybrid_rrf_k": 60})()
 
-    cfg = rag_config.get_rag_config()
+    def filtered_dense(*_args, chapter=None, **_kwargs):
+        hits = [
+            {"chunk_id": "1", "chapter": "Laws of Motion", "parent_id": ""},
+            {"chunk_id": "2", "chapter": "Thermodynamics", "parent_id": ""},
+        ]
+        return [hit for hit in hits if pinecone_store._chapter_matches(chapter, hit)]
 
-    assert (
-        cfg.database_url
-        == "postgresql://postgres.project-ref:pass%20word@aws-0-ap-south-1.pooler.supabase.com:6543/postgres"
+    def filtered_sparse(*_args, chapter=None, **_kwargs):
+        hits = [
+            {"chunk_id": "2", "chapter": "Thermodynamics", "parent_id": ""},
+            {"chunk_id": "3", "chapter": "Laws of Motion", "parent_id": ""},
+        ]
+        return [hit for hit in hits if pinecone_store._chapter_matches(chapter, hit)]
+
+    monkeypatch.setattr(pinecone_store, "get_rag_config", lambda: cfg)
+    monkeypatch.setattr(pinecone_store, "_dense_search", filtered_dense)
+    monkeypatch.setattr(pinecone_store, "_sparse_search", filtered_sparse)
+    monkeypatch.setattr(pinecone_store, "_attach_parent_text", lambda hits: hits)
+
+    hits = pinecone_store.hybrid_search(
+        [0.1, 0.2],
+        "force",
+        grade=9,
+        subject="Physics",
+        chapter="Motion",
     )
-    rag_config.get_rag_config.cache_clear()
-
-
-def test_rag_database_url_explicit_override_wins(monkeypatch):
-    monkeypatch.setenv("RAG_DATABASE_URL", "postgresql://postgres.example/pooler")
-    monkeypatch.setenv("PROJECT_URL", "https://project-ref.supabase.co")
-    monkeypatch.setenv("DB_PASSWORD", "password")
-    rag_config.get_rag_config.cache_clear()
-
-    cfg = rag_config.get_rag_config()
-
-    assert cfg.database_url == "postgresql://postgres.example/pooler"
-    rag_config.get_rag_config.cache_clear()
+    assert hits
+    assert all("motion" in hit["chapter"].casefold() for hit in hits)
 
 
 def test_embed_texts_requests_configured_dimensions(monkeypatch):
