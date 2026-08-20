@@ -30,7 +30,7 @@ export default function Landing() {
           <Link to="/login" data-testid="nav-login-link">
             <Button variant="ghost" className="text-foreground hover:bg-surface-2 rounded-pill">Sign in</Button>
           </Link>
-          <Link to="/signup" data-testid="nav-signup-link">
+          <Link to="/login" data-testid="nav-login-cta-link">
             <Button className="bg-coral hover:bg-coral-deep text-ink rounded-pill px-5">Get started</Button>
           </Link>
         </div>
@@ -47,14 +47,9 @@ export default function Landing() {
             SmartBatch turns messy WhatsApp groups, paper registers and manual fee chasing into one calm, AI-assisted platform for tutors, parents and students.
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-4">
-            <Link to="/signup" data-testid="hero-cta-primary">
+            <Link to="/login" data-testid="hero-cta-primary">
               <Button className="bg-coral hover:bg-coral-deep text-ink rounded-pill px-7 py-6 text-base gap-2">
-                Try the demo <ArrowRight className="w-4 h-4" />
-              </Button>
-            </Link>
-            <Link to="/login" data-testid="hero-cta-secondary">
-              <Button variant="outline" className="rounded-pill px-7 py-6 text-base border-coral text-coral hover:bg-coral hover:text-ink">
-                Sign in
+                Sign in <ArrowRight className="w-4 h-4" />
               </Button>
             </Link>
           </div>
@@ -138,17 +133,17 @@ export default function Landing() {
               Ready to see it working?
             </h3>
             <p className="text-muted-foreground mt-4 leading-relaxed">
-              Sign up as any role — Admin, Parent or Student — and explore the full demo. All flows work end-to-end in this preview.
+              Sign in as any role — Admin, Parent or Student — and explore the full demo. All flows work end-to-end in this preview.
             </p>
           </div>
           <div className="flex flex-wrap gap-3 lg:justify-end">
-            <Link to="/signup?role=admin" data-testid="cta-signup-admin">
+            <Link to="/login?role=admin" data-testid="cta-login-admin">
               <Button className="bg-coral hover:bg-coral-deep text-ink rounded-pill px-6 py-6">I'm a Tutor</Button>
             </Link>
-            <Link to="/signup?role=parent" data-testid="cta-signup-parent">
+            <Link to="/login?role=parent" data-testid="cta-login-parent">
               <Button variant="outline" className="rounded-pill px-6 py-6 border-white text-foreground bg-transparent hover:bg-white hover:text-ink">I'm a Parent</Button>
             </Link>
-            <Link to="/signup?role=student" data-testid="cta-signup-student">
+            <Link to="/login?role=student" data-testid="cta-login-student">
               <Button variant="outline" className="rounded-pill px-6 py-6 border-white text-foreground bg-transparent hover:bg-white hover:text-ink">I'm a Student</Button>
             </Link>
           </div>

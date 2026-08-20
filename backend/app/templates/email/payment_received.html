@@ -1,10 +1,16 @@
 {% extends "email/base.html" %}
 {% block title %}Payment received{% endblock %}
+{% block heading %}Payment received, {{ recipient_name }}{% endblock %}
 {% block content %}
-<p>Hi {{ recipient_name }},</p>
-<p>
-  We've received a payment of <strong>Rs. {{ amount }}</strong>{% if receipt_no %} (receipt #{{ receipt_no }}){% endif %}
-  for {{ student_name }}.
+<p style="margin:0 0 20px;text-align:center;color:#1f2328;">
+  We've received your payment{% if student_name %} for {{ student_name }}{% endif %}.
 </p>
-<p>Thank you!</p>
+<div style="border:1px solid #d0d7de;border-radius:6px;padding:24px;text-align:center;margin:0 0 20px;">
+  <p style="margin:0 0 8px;font-size:13px;color:#656d76;">Amount paid</p>
+  <p style="margin:0;font-size:28px;font-weight:600;color:#1f2328;">Rs. {{ amount }}</p>
+  {% if receipt_no %}
+  <p style="margin:12px 0 0;font-size:13px;color:#656d76;">Receipt #{{ receipt_no }}</p>
+  {% endif %}
+</div>
+<p style="margin:0;text-align:center;color:#1f2328;">Thank you for your payment.</p>
 {% endblock %}

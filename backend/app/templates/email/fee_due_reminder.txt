@@ -1,0 +1,5 @@
+Hi {{ recipient_name }},
+
+A fee payment of Rs. {{ amount }}{% if cycle_label %} ({{ cycle_label }}){% endif %} is due on {{ due_date }}{% if student_name %} for {{ student_name }}{% endif %}. Please pay before the due date to avoid a late fee.
+
+- SmartBatch

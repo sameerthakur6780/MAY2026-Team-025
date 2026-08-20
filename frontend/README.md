@@ -45,7 +45,7 @@ src/
 │   ├── mockData.js          all demo data + the mock AI assistant reply logic
 │   └── utils.js             `cn()` class-merge helper (shadcn convention)
 └── pages/
-    ├── Landing.jsx, Login.jsx, Signup.jsx
+    ├── Landing.jsx, Login.jsx
     ├── admin/                Dashboard, Finance, Attendance, Resources, Homework, Grading, Alerts
     ├── parent/               Dashboard, Safety, Fees, Performance
     └── student/              Dashboard, Resources, Homework, Assistant

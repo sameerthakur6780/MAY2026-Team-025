@@ -145,10 +145,7 @@ export default function Login() {
           </form>
 
           <div className="mt-6 text-sm text-center text-muted-foreground">
-            Don't have an account?{" "}
-            <Link to={`/signup?role=${role}`} className="text-coral font-semibold hover:underline" data-testid="goto-signup-link">
-              Create one
-            </Link>
+            Don't have an account? Ask your centre admin to create one for you.
           </div>
         </div>
       </div>

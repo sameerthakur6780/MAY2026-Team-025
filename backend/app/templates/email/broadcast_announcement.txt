@@ -1,0 +1,7 @@
+Hi {{ recipient_name }},
+
+{% if priority == "high" %}[Urgent] {% endif %}{{ title }}
+
+{{ message }}
+
+- SmartBatch

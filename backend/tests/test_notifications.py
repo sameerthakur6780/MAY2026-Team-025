@@ -59,7 +59,7 @@ def test_send_now_marks_failed_when_email_service_raises(app, monkeypatch):
         user = create_admin_user()
 
         class _FailingEmailService:
-            def send(self, to_email, subject, body):
+            def send(self, to_email, subject, body, html_body=None):
                 raise EmailSendError("smtp connection refused")
 
         monkeypatch.setattr(
@@ -381,3 +381,30 @@ def test_notify_payment_received_is_fully_functional(app):
         assert notification.type == NotificationType.PAYMENT_RECEIVED
         assert "R-1001" in notification.body
         assert len(outbox) == 1
+
+
+# ---------------------------------------------------------------------------
+# GET /api/notifications
+# ---------------------------------------------------------------------------
+
+
+def test_list_notifications_scoped_to_current_user(app, parent):
+    authed, parent_row = parent
+    with app.app_context():
+        other_parent = create_parent(email="other-parent@test.com")
+        NotificationService.send_now(parent_row.user_id, NotificationType.PAYMENT_RECEIVED, "Payment received", "Thanks!")
+        NotificationService.send_now(parent_row.user_id, NotificationType.FEE_DUE_REMINDER, "Fee due soon", "Please pay.")
+        NotificationService.send_now(other_parent.user_id, NotificationType.PAYMENT_RECEIVED, "Not yours", "Nope.")
+
+    resp = authed.get("/api/notifications")
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert body["total"] == 2
+    subjects = {item["subject"] for item in body["items"]}
+    assert subjects == {"Payment received", "Fee due soon"}
+    assert all("type" in item and "status" in item and "created_at" in item for item in body["items"])
+
+
+def test_list_notifications_requires_authentication(client):
+    resp = client.get("/api/notifications")
+    assert resp.status_code == 401
