@@ -53,7 +53,7 @@ export default function ParentFees() {
         description: `Fee — ${fee.cycle}`,
         theme: { color: "#FF6F59" },
         handler: () => {
-          toast.success("Payment received — confirming with the bank, this updates in a few seconds.");
+          toast.success("Payment received");
           setTimeout(refetch, 3000);
         },
         modal: {

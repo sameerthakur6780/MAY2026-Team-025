@@ -218,7 +218,9 @@ def send_fee_reminder(fee_id):
     if student is None or student.parent is None:
         raise ApiError("This student has no linked parent account to notify", "no_parent", 409)
 
-    NotificationService.notify_fee_due_reminder(student.parent.user_id, fee.amount, fee.due_date, cycle_label=fee.cycle)
+    NotificationService.notify_fee_due_reminder(
+        student.parent.user_id, fee.amount, fee.due_date, cycle_label=fee.cycle, student_name=student.user.full_name
+    )
     return fee
 
 
@@ -277,7 +279,7 @@ def mark_fee_paid_from_webhook(razorpay_order_id, razorpay_payment_id):
         student = Student.query.get(fee.student_id)
         if student is not None and student.parent is not None:
             NotificationService.notify_payment_received(
-                student.parent.user_id, fee.amount, receipt_no=fee.transaction_id
+                student.parent.user_id, fee.amount, receipt_no=fee.transaction_id, student_name=student.user.full_name
             )
     except Exception:
         logger.exception("Failed to send payment_received notification for StudentFee %s", fee.id)
@@ -309,7 +311,8 @@ def _schedule_fee_reminder(fee):
     reminder_at = datetime.combine(fee.due_date - timedelta(days=3), time(hour=9), tzinfo=timezone.utc)
     try:
         return NotificationService.schedule_fee_due_reminder(
-            student.parent.user_id, fee.amount, fee.due_date, reminder_at, cycle_label=fee.cycle
+            student.parent.user_id, fee.amount, fee.due_date, reminder_at,
+            cycle_label=fee.cycle, student_name=student.user.full_name,
         )
     except Exception:
         logger.exception("Failed to schedule fee_due_reminder for StudentFee %s", fee.id)

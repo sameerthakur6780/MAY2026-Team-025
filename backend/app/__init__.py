@@ -50,6 +50,7 @@ def create_app(config_class=Config):
     from app.routes.health import health_bp
     from app.routes.homework import homework_bp
     from app.routes.homework_submissions import homework_submissions_bp
+    from app.routes.notifications import notifications_bp
     from app.routes.parents import parents_bp
     from app.routes.payments import payments_bp
     from app.routes.resources import resources_bp
@@ -78,6 +79,7 @@ def create_app(config_class=Config):
     app.register_blueprint(fee_plans_bp)
     app.register_blueprint(fees_bp)
     app.register_blueprint(payments_bp)
+    app.register_blueprint(notifications_bp)
 
     from app.cli import create_admin, send_test_email
     app.cli.add_command(create_admin)

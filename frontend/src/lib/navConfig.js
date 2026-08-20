@@ -1,4 +1,4 @@
-import { LayoutDashboard, Wallet, Camera, FolderOpen, BookOpen, ClipboardCheck, Megaphone, Bell, LineChart, CalendarDays, CalendarClock, MessageCircle, GraduationCap, School, Presentation, Users, ClipboardList } from "lucide-react";
+import { LayoutDashboard, Wallet, Camera, FolderOpen, BookOpen, ClipboardCheck, Megaphone, Bell, CalendarDays, CalendarClock, MessageCircle, GraduationCap, School, Presentation, Users, ClipboardList } from "lucide-react";
 
 export const ADMIN_NAV = [
   { to: "/admin/dashboard", key: "admin-dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -25,7 +25,6 @@ export const PARENT_NAV = [
   { to: "/parent/attendance", key: "parent-attendance", label: "Attendance", icon: CalendarClock },
   { to: "/parent/safety", key: "parent-safety", label: "Safety Feed", icon: Bell },
   { to: "/parent/fees", key: "parent-fees", label: "Fees & Pay", icon: Wallet },
-  { to: "/parent/performance", key: "parent-performance", label: "Performance", icon: LineChart },
   { to: "/parent/resources", key: "parent-resources", label: "Resources", icon: FolderOpen },
 ];
 
