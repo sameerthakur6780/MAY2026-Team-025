@@ -14,30 +14,22 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Users, Plus, Pencil, Trash2 } from "lucide-react";
+import { Users, Plus, Trash2 } from "lucide-react";
 
 function emptyForm() {
-  return { full_name: "", email: "", password: "", phone: "", occupation: "", address: "" };
+  return { full_name: "", email: "", password: "", phone: "" };
 }
 
 export default function AdminParents() {
   const { items, page, pages, total, loading, error, setPage, refetch } = usePaginatedList("/api/parents");
 
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyForm());
   const [submitting, setSubmitting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
 
   const openCreate = () => {
-    setEditing(null);
     setForm(emptyForm());
-    setDialogOpen(true);
-  };
-
-  const openEdit = (parent) => {
-    setEditing(parent);
-    setForm({ ...emptyForm(), occupation: parent.occupation || "", address: parent.address || "" });
     setDialogOpen(true);
   };
 
@@ -45,23 +37,13 @@ export default function AdminParents() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      if (editing) {
-        await api.patch(`/api/parents/${editing.id}`, {
-          occupation: form.occupation || null,
-          address: form.address || null,
-        });
-        toast.success("Parent updated");
-      } else {
-        await api.post("/api/parents", {
-          full_name: form.full_name,
-          email: form.email,
-          password: form.password,
-          phone: form.phone || null,
-          occupation: form.occupation || null,
-          address: form.address || null,
-        });
-        toast.success("Parent created");
-      }
+      await api.post("/api/parents", {
+        full_name: form.full_name,
+        email: form.email,
+        password: form.password,
+        phone: form.phone || null,
+      });
+      toast.success("Parent created");
       setDialogOpen(false);
       refetch();
     } catch (err) {
@@ -148,9 +130,6 @@ export default function AdminParents() {
                       <TableCell>{p.occupation || <span className="text-muted-foreground">--</span>}</TableCell>
                       <TableCell>{p.student_ids?.length || 0}</TableCell>
                       <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" data-testid={`edit-parent-${p.id}`} onClick={() => openEdit(p)}>
-                          <Pencil className="w-4 h-4" />
-                        </Button>
                         <Button variant="ghost" size="icon" data-testid={`delete-parent-${p.id}`} onClick={() => setDeleteTarget(p)}>
                           <Trash2 className="w-4 h-4 text-coral" />
                         </Button>
@@ -168,47 +147,27 @@ export default function AdminParents() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>{editing ? "Edit parent" : "Add parent"}</DialogTitle>
+            <DialogTitle>Add parent</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4" data-testid="parent-form">
-            {!editing && (
-              <>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label>Full name</Label>
-                    <Input required placeholder="e.g. Priya Nair" value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Email</Label>
-                    <Input required type="email" placeholder="parent@email.com" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label>Password</Label>
-                    <Input required type="password" minLength={6} title="At least 6 characters" placeholder="At least 6 characters" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Phone</Label>
-                    <Input placeholder="Optional" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-                  </div>
-                </div>
-              </>
-            )}
-            {editing && (
-              <div className="p-3 rounded-lg bg-surface-2 text-sm">
-                <div className="font-medium">{editing.full_name}</div>
-                <div className="text-xs text-muted-foreground">{editing.email}</div>
-              </div>
-            )}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label>Occupation</Label>
-                <Input placeholder="Optional" value={form.occupation} onChange={(e) => setForm({ ...form, occupation: e.target.value })} />
+                <Label>Full name</Label>
+                <Input required placeholder="e.g. Priya Nair" value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} />
               </div>
               <div className="space-y-1.5">
-                <Label>Address</Label>
-                <Input placeholder="Optional" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+                <Label>Email</Label>
+                <Input required type="email" placeholder="parent@email.com" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Password</Label>
+                <Input required type="password" minLength={6} title="At least 6 characters" placeholder="At least 6 characters" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Phone</Label>
+                <Input placeholder="Optional" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
               </div>
             </div>
             <DialogFooter>
@@ -216,7 +175,7 @@ export default function AdminParents() {
                 Cancel
               </Button>
               <Button type="submit" disabled={submitting} className="bg-coral hover:bg-coral-deep text-ink">
-                {submitting ? "Saving..." : editing ? "Save changes" : "Create parent"}
+                {submitting ? "Saving..." : "Create parent"}
               </Button>
             </DialogFooter>
           </form>

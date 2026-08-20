@@ -108,7 +108,37 @@ def create_fee_plan(data):
     )
     db.session.add(plan)
     db.session.commit()
+
+    # generate_upcoming_student_fees() (the recurring job) only ever creates
+    # *next* month's cycle -- without this, a plan created today wouldn't
+    # produce a payable invoice until FEE_GENERATION_DAY_OF_MONTH next runs.
+    # A student a plan is created for today should be billed for their
+    # starting cycle today.
+    generate_initial_fee(plan)
     return plan
+
+
+def generate_initial_fee(plan):
+    """Creates the StudentFee for `plan`'s own starting cycle if one doesn't
+    already exist. Safe to call more than once for the same plan (the
+    fee_plan_id+cycle unique constraint plus the pre-check guard the same
+    way generate_upcoming_student_fees() does)."""
+    cycle = f"{plan.start_date.year:04d}-{plan.start_date.month:02d}"
+    if StudentFee.query.filter_by(fee_plan_id=plan.id, cycle=cycle).first() is not None:
+        return None
+
+    fee = StudentFee(
+        fee_plan_id=plan.id,
+        student_id=plan.student_id,
+        cycle=cycle,
+        amount=plan.monthly_amount,
+        due_date=_due_date_for(plan.start_date.year, plan.start_date.month),
+        status=FeeStatus.PENDING,
+    )
+    db.session.add(fee)
+    db.session.commit()
+    _schedule_fee_reminder(fee)
+    return fee
 
 
 def update_fee_plan(plan_id, data):
@@ -174,6 +204,22 @@ def list_fees_query(role, class_id=None, status=None):
     if status is not None:
         query = query.filter(StudentFee.status == FeeStatus(status))
     return query.order_by(StudentFee.due_date.desc())
+
+
+def send_fee_reminder(fee_id):
+    """Admin-triggered, immediate version of the same reminder
+    _schedule_fee_reminder() queues automatically 3 days before the due
+    date -- lets an admin nudge a parent on demand instead of waiting."""
+    fee = get_fee_or_404(fee_id)
+    if fee.status == FeeStatus.PAID:
+        raise ApiError("This fee has already been paid", "already_paid", 409)
+
+    student = Student.query.get(fee.student_id)
+    if student is None or student.parent is None:
+        raise ApiError("This student has no linked parent account to notify", "no_parent", 409)
+
+    NotificationService.notify_fee_due_reminder(student.parent.user_id, fee.amount, fee.due_date, cycle_label=fee.cycle)
+    return fee
 
 
 # ---------------------------------------------------------------------------

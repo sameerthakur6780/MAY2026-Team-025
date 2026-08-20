@@ -7,7 +7,6 @@ export const ADMIN_NAV = [
   { to: "/admin/teachers", key: "admin-teachers", label: "Teachers", icon: Presentation },
   { to: "/admin/parents", key: "admin-parents", label: "Parents", icon: Users },
   { to: "/admin/assignments", key: "admin-assignments", label: "Assignments", icon: ClipboardList },
-  { to: "/admin/finance", key: "admin-finance", label: "Finance", icon: Wallet },
   { to: "/admin/attendance", key: "admin-attendance", label: "Attendance", icon: Camera },
   { to: "/admin/resources", key: "admin-resources", label: "Resources", icon: FolderOpen },
   { to: "/admin/homework", key: "admin-homework", label: "Homework", icon: BookOpen },

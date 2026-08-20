@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt
 
 from app.models.fee import FeeStatus
-from app.services.fee_service import create_payment_order, list_fees_query, serialize_student_fee
+from app.services.fee_service import create_payment_order, list_fees_query, send_fee_reminder, serialize_student_fee
 from app.utils.decorators import role_required
 from app.utils.pagination import paginate_query
 
@@ -48,3 +48,10 @@ def create_order_route(fee_id):
     role = get_jwt()["role"]
     order = create_payment_order(fee_id, role)
     return jsonify(order), 201
+
+
+@fees_bp.post("/<int:fee_id>/remind")
+@role_required("admin")
+def remind_route(fee_id):
+    fee = send_fee_reminder(fee_id)
+    return jsonify(serialize_student_fee(fee)), 200
