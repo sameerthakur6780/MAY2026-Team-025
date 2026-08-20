@@ -65,6 +65,14 @@ DEMO_PASSWORD = "Demo@1234"
 FIXTURES_DIR = Path(__file__).resolve().parent.parent / "tests" / "fixtures"
 TODAY = date.today()
 
+# Real inboxes for this demo, swapped in for one login of each role so the
+# app's actual email flows (fee reminders, payment receipts) land somewhere
+# a person can be shown, instead of @smartbatch.demo addresses nobody reads.
+REAL_DEMO_EMAILS = {
+    "Deebhika Kumaran": "deebhikakumran@gmail.com",
+    "Jessy Kumaran": "jessykumaran@gmail.com",
+}
+
 random.seed(42)
 _phone_seq = itertools.count(1)
 _admission_seq = itertools.count(1)
@@ -149,8 +157,8 @@ def wipe_demo_data():
 def create_admin():
     print("Creating admin...")
     user = User(
-        full_name="Demo Admin",
-        email="admin@smartbatch.demo",
+        full_name="Blessey Rajavel",
+        email="blesseyrajavel@gmail.com",
         password_hash=bcrypt.generate_password_hash(DEMO_PASSWORD).decode("utf-8"),
         phone=_phone(),
         role=RoleEnum.ADMIN,
@@ -165,8 +173,8 @@ def create_teachers():
     teacher_a = create_managed_account(
         {
             "role": "teacher",
-            "full_name": "Neha Kulkarni",
-            "email": "neha.kulkarni@smartbatch.demo",
+            "full_name": "Guhan Kumaran",
+            "email": "guhankumaran@gmail.com",
             "password": DEMO_PASSWORD,
             "phone": _phone(),
         }
@@ -226,7 +234,7 @@ FACE_STUDENTS = [
     ("Kabir Singh", "person3.jpg", "Manpreet Singh"),
 ]
 REGULAR_STUDENTS = {
-    7: [("Priya Sharma", "Suresh Sharma"), ("Rohan Gupta", "Anita Gupta"), ("Ishaan Verma", "Deepak Verma")],
+    7: [("Deebhika Kumaran", "Jessy Kumaran"), ("Rohan Gupta", "Anita Gupta"), ("Ishaan Verma", "Deepak Verma")],
     8: [("Ananya Iyer", "Kavita Iyer"), ("Vivaan Joshi", "Ramesh Joshi"), ("Sneha Reddy", "Padma Reddy")],
 }
 
@@ -240,7 +248,7 @@ def _create_student_with_parent(full_name, parent_name, class_id, admission_no):
         {
             "role": "parent",
             "full_name": parent_name,
-            "email": f"{_slug(parent_name)}@smartbatch.demo",
+            "email": REAL_DEMO_EMAILS.get(parent_name, f"{_slug(parent_name)}@smartbatch.demo"),
             "password": DEMO_PASSWORD,
             "phone": _phone(),
         }
@@ -250,7 +258,7 @@ def _create_student_with_parent(full_name, parent_name, class_id, admission_no):
         {
             "role": "student",
             "full_name": full_name,
-            "email": f"{_slug(full_name)}@smartbatch.demo",
+            "email": REAL_DEMO_EMAILS.get(full_name, f"{_slug(full_name)}@smartbatch.demo"),
             "password": DEMO_PASSWORD,
             "phone": _phone(),
             "admission_no": admission_no,
@@ -500,7 +508,7 @@ def seed():
 
         print(f"\nDone. {len(students)} students across {len(classes)} classes.")
         print(f"All accounts use the password: {DEMO_PASSWORD}")
-        print("Admin login: admin@smartbatch.demo")
+        print("Admin login: blesseyrajavel@gmail.com")
 
 
 if __name__ == "__main__":

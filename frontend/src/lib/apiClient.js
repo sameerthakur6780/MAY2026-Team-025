@@ -15,9 +15,29 @@ export class ApiError extends Error {
   }
 }
 
-export function getCookie(name) {
-  const match = document.cookie.match(new RegExp("(?:^|; )" + name + "=([^;]*)"));
-  return match ? decodeURIComponent(match[1]) : null;
+// flask-jwt-extended's CSRF cookie is only readable via document.cookie by
+// JS running same-origin with whatever set it -- fine in local dev (Vite
+// and Flask share the "localhost" hostname, cookies ignore port), but the
+// deployed frontend (Vercel) and backend (Render) are on entirely different
+// domains, so this page's JS can never read that cookie there. The backend
+// echoes the current csrf value in the JSON body of /login, /refresh, and
+// /me instead (see auth.py) -- every response is scanned for it below, so
+// this stays in sync without a dedicated round-trip.
+let csrfToken = null;
+// /api/auth/refresh checks the *refresh* token's own csrf claim, a
+// different value from the access token's -- flask-jwt-extended issues one
+// independently per token. Sending the access token's value there always
+// fails with a CSRF mismatch, silently breaking every refresh once the
+// access token actually expires (see auth.py's login()/refresh()).
+let refreshCsrfToken = null;
+
+export function getCsrfToken() {
+  return csrfToken;
+}
+
+export function clearCsrfToken() {
+  csrfToken = null;
+  refreshCsrfToken = null;
 }
 
 export function formatErrorMessage(rawMessage, fallback) {
@@ -40,9 +60,9 @@ async function rawRequest(path, { method = "GET", body } = {}) {
   }
 
   if (!SAFE_METHODS.has(method.toUpperCase())) {
-    const csrfToken = getCookie("csrf_access_token");
-    if (csrfToken) {
-      headers["X-CSRF-TOKEN"] = csrfToken;
+    const tokenForThisRequest = path === "/api/auth/refresh" ? refreshCsrfToken : csrfToken;
+    if (tokenForThisRequest) {
+      headers["X-CSRF-TOKEN"] = tokenForThisRequest;
     }
   }
 
@@ -50,7 +70,7 @@ async function rawRequest(path, { method = "GET", body } = {}) {
     method,
     headers,
     body: finalBody,
-    credentials: "include", 
+    credentials: "include",
   });
 
   const text = await response.text();
@@ -61,6 +81,13 @@ async function rawRequest(path, { method = "GET", body } = {}) {
     } catch {
       data = null;
     }
+  }
+
+  if (data && typeof data.csrf_access_token === "string") {
+    csrfToken = data.csrf_access_token;
+  }
+  if (data && typeof data.csrf_refresh_token === "string") {
+    refreshCsrfToken = data.csrf_refresh_token;
   }
 
   if (!response.ok) {

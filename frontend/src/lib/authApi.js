@@ -1,4 +1,4 @@
-import { api } from "@/lib/apiClient";
+import { api, clearCsrfToken } from "@/lib/apiClient";
 
 export async function login(email, password) {
   await api.post("/api/auth/login", { email, password });
@@ -12,6 +12,7 @@ export async function logout() {
     // Best-effort -- cookies get cleared server-side regardless; the
     // caller clears client state whether or not this succeeds.
   }
+  clearCsrfToken();
 }
 
 export function getCurrentUser() {

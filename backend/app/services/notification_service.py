@@ -298,6 +298,21 @@ class NotificationService:
         )
 
     @staticmethod
+    def notify_broadcast_announcement(user_ids, title, message, priority="medium"):
+        """Fans one admin-authored announcement out to many recipients at
+        once. Scheduled for "now" rather than sent inline -- same reasoning
+        as notify_homework_assigned: an admin broadcasting to a whole class
+        or the entire centre shouldn't block the request on N synchronous
+        SMTP round-trips."""
+        subject = f"[Urgent] {title}" if priority == "high" else title
+        body = f"{message}\n\n- SmartBatch" if message else "- SmartBatch"
+        now = _utcnow()
+        return [
+            NotificationService.schedule(user_id, NotificationType.ANNOUNCEMENT, subject, body, now)
+            for user_id in user_ids
+        ]
+
+    @staticmethod
     def notify_payment_received(parent_user_id, amount, receipt_no=None):
         """STUB call site, same as notify_fee_due_reminder -- ready for the
         payments module to call directly from a successful payment

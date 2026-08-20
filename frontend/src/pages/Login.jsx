@@ -10,7 +10,7 @@ import { useAuth } from "@/context/AuthContext";
 import { ApiError } from "@/lib/apiClient";
 
 const ROLES = [
-  { key: "admin", label: "Admin / Tutor", icon: ShieldCheck },
+  { key: "admin", label: "Admin", icon: ShieldCheck },
   { key: "teacher", label: "Teacher", icon: Presentation },
   { key: "parent", label: "Parent", icon: Users },
   { key: "student", label: "Student", icon: GraduationCap },

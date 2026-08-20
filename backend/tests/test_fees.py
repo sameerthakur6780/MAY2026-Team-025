@@ -115,9 +115,18 @@ def test_admin_can_crud_fee_plan(app, admin):
     assert list_resp.status_code == 200
     assert len(list_resp.get_json()["items"]) == 1
 
+    # Creating a plan immediately generates its starting cycle's invoice
+    # (see create_fee_plan -- a student shouldn't wait until
+    # FEE_GENERATION_DAY_OF_MONTH for their first bill), so it can no longer
+    # be hard-deleted -- see test_fee_plan_delete_blocked_once_fees_exist for
+    # that path in isolation. Deactivating is the real "remove" affordance
+    # once a plan has billing history.
     delete_resp = admin.delete(f"/api/fee-plans/{plan_id}")
-    assert delete_resp.status_code == 204
-    assert admin.get(f"/api/fee-plans/{plan_id}").status_code == 404
+    assert delete_resp.status_code == 409
+
+    deactivate_resp = admin.patch(f"/api/fee-plans/{plan_id}", json={"active": False})
+    assert deactivate_resp.status_code == 200
+    assert deactivate_resp.get_json()["active"] is False
 
 
 def test_fee_plan_delete_blocked_once_fees_exist(app, admin):
@@ -135,6 +144,89 @@ def test_fee_plan_delete_blocked_once_fees_exist(app, admin):
 def test_fee_plan_crud_requires_admin(parent):
     authed, _ = parent
     resp = authed.post("/api/fee-plans", json={"student_id": 1, "monthly_amount": 1000, "start_date": "2026-01-01"})
+    assert resp.status_code == 403
+
+
+def test_create_fee_plan_generates_starting_cycle_invoice(app, admin):
+    """A plan shouldn't sit invisible until FEE_GENERATION_DAY_OF_MONTH --
+    creating one bills the student for their starting cycle immediately."""
+    with app.app_context():
+        school_class = create_class(grade=1)
+        student = create_student(class_id=school_class.id)
+        student_id = student.id
+
+    create_resp = admin.post(
+        "/api/fee-plans", json={"student_id": student_id, "monthly_amount": 1500, "start_date": "2026-03-05"}
+    )
+    assert create_resp.status_code == 201, create_resp.get_json()
+
+    list_resp = admin.get(f"/api/fees?student_id={student_id}")
+    items = list_resp.get_json()["items"]
+    assert len(items) == 1
+    assert items[0]["cycle"] == "2026-03"
+    assert items[0]["amount"] == 1500
+    assert items[0]["status"] == "pending"
+    expected_due_day = min(10, calendar.monthrange(2026, 3)[1])  # FEE_DUE_DAY_OF_MONTH=10 in TestConfig
+    assert items[0]["due_date"] == date(2026, 3, expected_due_day).isoformat()
+
+    with app.app_context():
+        _cleanup_fee_reminder_jobs()
+
+
+def test_create_fee_plan_does_not_duplicate_invoice_for_same_cycle(app, admin):
+    """generate_initial_fee() is called from inside create_fee_plan(), which
+    already committed the plan -- confirms it won't double-create if a
+    StudentFee for that cycle somehow already exists."""
+    with app.app_context():
+        school_class = create_class(grade=1)
+        student = create_student(class_id=school_class.id)
+        student_id = student.id
+
+    create_resp = admin.post(
+        "/api/fee-plans", json={"student_id": student_id, "monthly_amount": 1200, "start_date": "2026-02-01"}
+    )
+    plan_id = create_resp.get_json()["id"]
+
+    with app.app_context():
+        from app.services.fee_service import generate_initial_fee
+
+        plan = FeePlan.query.get(plan_id)
+        result = generate_initial_fee(plan)  # calling again directly should no-op
+        assert result is None
+        assert StudentFee.query.filter_by(fee_plan_id=plan_id).count() == 1
+        _cleanup_fee_reminder_jobs()
+
+
+def test_remind_route_sends_reminder_and_rejects_already_paid(app, admin):
+    with app.app_context():
+        school_class = create_class(grade=1)
+        parent_row = create_parent()
+        student_row = create_student(class_id=school_class.id, parent_id=parent_row.id)
+        plan = _make_fee_plan(student_row)
+        fee = _make_student_fee(plan, student_row, "2026-01", date(2026, 1, 10))
+        fee_id = fee.id
+        paid_fee = _make_student_fee(plan, student_row, "2025-12", date(2025, 12, 10))
+        paid_fee.status = FeeStatus.PAID
+        db.session.commit()
+        paid_fee_id = paid_fee.id
+
+    with mail.record_messages() as outbox:
+        resp = admin.post(f"/api/fees/{fee_id}/remind")
+    assert resp.status_code == 200, resp.get_json()
+    assert len(outbox) == 1
+
+    with app.app_context():
+        notification = Notification.query.filter_by(type=NotificationType.FEE_DUE_REMINDER).one()
+        assert notification.status == NotificationStatus.SENT
+
+    already_paid_resp = admin.post(f"/api/fees/{paid_fee_id}/remind")
+    assert already_paid_resp.status_code == 409
+    assert already_paid_resp.get_json()["error"] == "already_paid"
+
+
+def test_remind_route_requires_admin(parent):
+    authed, _ = parent
+    resp = authed.post("/api/fees/1/remind")
     assert resp.status_code == 403
 
 
