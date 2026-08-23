@@ -92,6 +92,10 @@ class TestConfig:
     FEE_GENERATION_DAY_OF_MONTH = 25
     FEE_DUE_DAY_OF_MONTH = 10
 
+    AI_GRADING_ENABLED = True
+    AI_GRADING_WORKERS = 2
+    AI_GRADING_MAX_CHARS = 50000
+
 
 class FakeStorageService:
     """In-memory stand-in for SupabaseStorageService. No network I/O."""
@@ -105,6 +109,11 @@ class FakeStorageService:
 
     def get_signed_url(self, path, expires_in):
         return f"https://fake-storage.test/{path}?expires_in={expires_in}"
+
+    def download(self, path):
+        if path not in self.store:
+            raise FileNotFoundError(path)
+        return self.store[path]
 
     def delete(self, path):
         self.store.pop(path, None)

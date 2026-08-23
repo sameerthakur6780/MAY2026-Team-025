@@ -167,6 +167,10 @@ class Config:
     FEE_GENERATION_DAY_OF_MONTH = int(os.environ.get("FEE_GENERATION_DAY_OF_MONTH", "25"))
     FEE_DUE_DAY_OF_MONTH = int(os.environ.get("FEE_DUE_DAY_OF_MONTH", "10"))
 
+    AI_GRADING_ENABLED = _bool_env("AI_GRADING_ENABLED", default=True)
+    AI_GRADING_WORKERS = int(os.environ.get("AI_GRADING_WORKERS", "3"))
+    AI_GRADING_MAX_CHARS = int(os.environ.get("AI_GRADING_MAX_CHARS", "50000"))
+
 
 def validate_mail_config(app):
     """Called once from create_app(), after app.config.from_object(), so an

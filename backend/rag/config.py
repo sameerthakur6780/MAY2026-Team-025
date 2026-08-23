@@ -74,6 +74,13 @@ class RagConfig:
         default_factory=lambda: _int_env("RAG_REWRITE_MAX_OUTPUT_TOKENS", 512)
     )
     llm_timeout_seconds: int = field(default_factory=lambda: _int_env("RAG_LLM_TIMEOUT_SECONDS", 30))
+    # Answer-key parsing / grading responses echo back every question's text
+    # and expected answer as JSON, which is far larger than a short RAG query
+    # rewrite -- give it its own, much bigger budget so multi-question answer
+    # keys don't get cut off mid-JSON (see rag/generation/grading.py).
+    grading_max_output_tokens: int = field(
+        default_factory=lambda: _int_env("RAG_GRADING_MAX_OUTPUT_TOKENS", 4096)
+    )
 
 
 @lru_cache(maxsize=1)

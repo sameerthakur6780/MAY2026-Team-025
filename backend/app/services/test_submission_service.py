@@ -10,8 +10,9 @@ from werkzeug.utils import secure_filename
 
 from app.extensions import db
 from app.models.student import Student
-from app.models.test import Test, TestSubmission
 from app.models.homework import SubmissionStatus
+from app.models.test import Test, TestSubmission
+from app.models.test_evaluation import GradedSource, TestAnswerKeyQuestion, TestQuestionScore
 from app.services.notification_service import NotificationService
 from app.services.storage import get_storage_service
 from app.utils.errors import ApiError, forbidden, not_found
@@ -32,7 +33,33 @@ def serialize_submission(submission):
         "graded_by": submission.graded_by,
         "graded_by_name": submission.grader.full_name if submission.grader else None,
         "status": submission.status.value,
+        "ai_marks": submission.ai_marks,
+        "ai_feedback": submission.ai_feedback,
+        "ai_model_used": submission.ai_model_used,
+        "ai_graded_at": submission.ai_graded_at.isoformat() if submission.ai_graded_at else None,
+        "graded_source": submission.graded_source.value if submission.graded_source else None,
     }
+
+
+def serialize_question_scores(submission):
+    scores = (
+        TestQuestionScore.query.filter_by(submission_id=submission.id)
+        .join(TestAnswerKeyQuestion, TestQuestionScore.answer_key_question_id == TestAnswerKeyQuestion.id)
+        .order_by(TestAnswerKeyQuestion.question_no)
+        .all()
+    )
+    return [
+        {
+            "question_no": score.answer_key_question.question_no,
+            "question_text": score.answer_key_question.question_text,
+            "expected_answer": score.answer_key_question.expected_answer,
+            "max_marks": score.answer_key_question.max_marks,
+            "awarded_marks": score.awarded_marks,
+            "feedback": score.feedback,
+            "student_excerpt": score.student_excerpt,
+        }
+        for score in scores
+    ]
 
 
 def get_submission_or_404(submission_id):
@@ -114,6 +141,7 @@ def grade_submission(submission_id, marks, feedback, graded_by):
     submission.feedback = feedback
     submission.graded_by = graded_by
     submission.status = SubmissionStatus.GRADED
+    submission.graded_source = GradedSource.MANUAL
     db.session.commit()
 
     try:

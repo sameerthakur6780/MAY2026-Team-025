@@ -95,4 +95,7 @@ def create_app(config_class=Config):
     from app.services.fee_service import init_fee_scheduler
     init_fee_scheduler(app)
 
+    from app.services.ai_grading_service import init_evaluation_scheduler
+    init_evaluation_scheduler(app)
+
     return app

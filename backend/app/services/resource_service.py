@@ -12,6 +12,7 @@ from app.models.academic import SchoolClass, Subject
 from app.models.homework import Homework
 from app.models.resource import Resource, ResourceType
 from app.models.test import Test
+from app.models.test_evaluation import EvaluationStatus
 from app.services.email import send_email
 from app.services.storage import get_storage_service
 from app.utils.errors import ApiError, forbidden, not_found
@@ -130,6 +131,14 @@ def queue_pdf_ingestion(resource, notify_email, notify_name):
         ).start()
 
 
+def _answer_key_visible_to_student_or_parent(resource_id):
+    """Answer keys are hidden until the owning test's evaluation completes."""
+    test = Test.query.filter_by(answer_key_resource_id=resource_id).first()
+    if test is None:
+        return False
+    return test.evaluation_status == EvaluationStatus.COMPLETED
+
+
 def _scoped_query(role):
     query = Resource.query
     if role == "admin":
@@ -139,13 +148,32 @@ def _scoped_query(role):
         return query.filter(Resource.class_id.in_(class_ids)) if class_ids else query.filter(false())
     if role == "parent":
         class_ids = {s.class_id for s in current_parent().students if s.class_id is not None}
-        return query.filter(Resource.class_id.in_(class_ids)) if class_ids else query.filter(false())
-    if role == "student":
+        if not class_ids:
+            return query.filter(false())
+        query = query.filter(Resource.class_id.in_(class_ids))
+    elif role == "student":
         student = current_student()
         if student.class_id is None:
             return query.filter(false())
-        return query.filter(Resource.class_id == student.class_id)
-    raise forbidden()
+        query = query.filter(Resource.class_id == student.class_id)
+    else:
+        raise forbidden()
+
+    if role in ("parent", "student"):
+        visible_answer_keys = [
+            row[0]
+            for row in Test.query.filter(
+                Test.evaluation_status == EvaluationStatus.COMPLETED,
+                Test.answer_key_resource_id.isnot(None),
+            ).with_entities(Test.answer_key_resource_id)
+        ]
+        query = query.filter(
+            db.or_(
+                Resource.type != ResourceType.ANSWER_KEY,
+                Resource.id.in_(visible_answer_keys) if visible_answer_keys else false(),
+            )
+        )
+    return query
 
 
 def list_resources_query(role, class_id=None, subject_id=None):
@@ -172,9 +200,13 @@ def get_resource_scoped(resource_id, role):
         child_class_ids = {s.class_id for s in current_parent().students}
         if resource.class_id not in child_class_ids:
             raise forbidden()
+        if resource.type == ResourceType.ANSWER_KEY and not _answer_key_visible_to_student_or_parent(resource.id):
+            raise forbidden()
         return resource
     if role == "student":
         if resource.class_id != current_student().class_id:
+            raise forbidden()
+        if resource.type == ResourceType.ANSWER_KEY and not _answer_key_visible_to_student_or_parent(resource.id):
             raise forbidden()
         return resource
     raise forbidden()

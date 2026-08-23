@@ -5,8 +5,10 @@ from marshmallow import ValidationError
 from app.schemas.submission_schema import GradeSchema
 from app.services.test_submission_service import (
     get_download_url,
+    get_submission_scoped,
     grade_submission,
     list_submissions_query,
+    serialize_question_scores,
     serialize_submission,
 )
 from app.utils.decorators import role_required
@@ -63,6 +65,14 @@ def download_submission(submission_id):
     role = get_jwt()["role"]
     url, expires_in, _submission = get_download_url(submission_id, role)
     return jsonify({"url": url, "expires_in": expires_in}), 200
+
+
+@test_submissions_bp.get("/<int:submission_id>/scores")
+@role_required(*_ALL_ROLES)
+def get_submission_scores(submission_id):
+    role = get_jwt()["role"]
+    submission = get_submission_scoped(submission_id, role)
+    return jsonify({"submission_id": submission.id, "scores": serialize_question_scores(submission)}), 200
 
 
 @test_submissions_bp.patch("/<int:submission_id>/grade")
