@@ -253,7 +253,7 @@ def _grade_missing_student(test_id, student_id, questions, app):
             if student and test:
                 try:
                     NotificationService.notify_marks_published(
-                        student, "test", test.title, test.subject.name, 0
+                        student, "test", test.title, test.subject.name, 0, max_marks=test.max_marks
                     )
                 except Exception:
                     logger.exception("Failed to notify student %s for missing submission", student_id)
@@ -325,6 +325,7 @@ def _grade_submission_worker(submission_id, questions, grade, subject, app):
                     submission.test.title,
                     submission.test.subject.name,
                     total,
+                    max_marks=submission.test.max_marks,
                 )
             except Exception:
                 logger.exception("Failed to notify for submission %s", submission_id)

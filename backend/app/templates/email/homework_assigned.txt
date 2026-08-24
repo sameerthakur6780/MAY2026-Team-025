@@ -1,0 +1,5 @@
+Hi {{ recipient_name }},
+
+New homework "{{ title }}" ({{ subject_name }}) has been assigned{% if grade %} to Grade {{ grade }}{% endif %}, due {{ due_date }}.
+
+- SmartBatch

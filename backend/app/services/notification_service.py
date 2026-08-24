@@ -279,27 +279,41 @@ class NotificationService:
             student = Student.query.get(student_id)
             if student is None:
                 continue
+            html_body = NotificationService._render_email_html(
+                "homework_assigned", student.user_id, title=homework.title, subject_name=homework.subject.name,
+                grade=homework.school_class.grade if homework.school_class else None,
+                due_date=homework.due_date.isoformat(),
+            )
             notifications.append(
-                NotificationService.schedule(student.user_id, NotificationType.HOMEWORK_ASSIGNED, subject, body, now)
+                NotificationService.schedule(
+                    student.user_id, NotificationType.HOMEWORK_ASSIGNED, subject, body, now, html_body=html_body
+                )
             )
         return notifications
 
     @staticmethod
-    def notify_marks_published(student, item_kind, item_title, subject_name, marks):
+    def notify_marks_published(student, item_kind, item_title, subject_name, marks, max_marks=None):
         """item_kind is just for the message wording, e.g. "homework" or
         "test". Notifies the student and, if linked, their parent."""
         subject = f"Marks published: {item_title}"
         body = (
-            f"Marks for the {item_kind} \"{item_title}\" ({subject_name}) have been published: {marks}.\n\n"
+            f"Marks for the {item_kind} \"{item_title}\" ({subject_name}) have been published: {marks}"
+            f"{f' / {max_marks}' if max_marks else ''}.\n\n"
             f"- SmartBatch"
         )
         recipient_ids = [student.user_id]
         if student.parent is not None:
             recipient_ids.append(student.parent.user_id)
-        return [
-            NotificationService.send_now(uid, NotificationType.MARKS_PUBLISHED, subject, body)
-            for uid in recipient_ids
-        ]
+        notifications = []
+        for uid in recipient_ids:
+            html_body = NotificationService._render_email_html(
+                "marks_published", uid, item_kind=item_kind, item_title=item_title,
+                subject_name=subject_name, marks=marks, max_marks=max_marks,
+            )
+            notifications.append(
+                NotificationService.send_now(uid, NotificationType.MARKS_PUBLISHED, subject, body, html_body=html_body)
+            )
+        return notifications
 
     @staticmethod
     def _fee_due_reminder_content(amount, due_date, cycle_label=None):

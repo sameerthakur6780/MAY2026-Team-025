@@ -9,9 +9,7 @@ export const ADMIN_NAV = [
   { to: "/admin/assignments", key: "admin-assignments", label: "Assignments", icon: ClipboardList },
   { to: "/admin/attendance", key: "admin-attendance", label: "Attendance", icon: Camera },
   { to: "/admin/resources", key: "admin-resources", label: "Resources", icon: FolderOpen },
-  { to: "/admin/homework", key: "admin-homework", label: "Homework", icon: BookOpen },
   { to: "/admin/tests", key: "admin-tests", label: "Tests", icon: FileCheck },
-  { to: "/admin/grading", key: "admin-grading", label: "AI Grading", icon: ClipboardCheck },
   { to: "/admin/alerts", key: "admin-alerts", label: "Alerts", icon: Megaphone },
 ];
 

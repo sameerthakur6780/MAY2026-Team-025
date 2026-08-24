@@ -1,0 +1,7 @@
+Hi {{ recipient_name }},
+
+Marks for the {{ item_kind }} "{{ item_title }}" ({{ subject_name }}) have been published: {{ marks }}{% if max_marks %} / {{ max_marks }}{% endif %}.
+
+Log in to SmartBatch to view full feedback.
+
+- SmartBatch
