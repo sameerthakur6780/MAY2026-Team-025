@@ -8,7 +8,12 @@ from werkzeug.utils import secure_filename
 
 from app.extensions import db
 from app.models.academic import SchoolClass
+from app.models.attendance import Attendance
+from app.models.fee import FeePlan, StudentFee
+from app.models.homework import Submission
+from app.models.notification import Notification
 from app.models.student import Student
+from app.models.test import TestSubmission
 from app.services.auth_service import create_managed_account
 from app.services.facial_recognition import FaceDetectionError, compute_profile_embedding
 from app.services.storage import get_storage_service
@@ -107,8 +112,48 @@ def delete_student(student_id):
     student = Student.query.get(student_id)
     if student is None:
         raise not_found("Student")
+
+    # Attendance/homework/test/fee history all have NOT NULL, non-cascading
+    # FKs to students.id (and Notification.user_id would block the cascaded
+    # User delete too) -- hard-deleting a student with real history would
+    # either raise a raw IntegrityError (like this one) or silently wipe out
+    # academic/financial records. Block it with a clear message instead, same
+    # as delete_parent's "linked student" guard; deactivate via status update
+    # if the student just needs to be hidden going forward.
+    blockers = []
+    if Attendance.query.filter_by(student_id=student.id).first() is not None:
+        blockers.append("attendance records")
+    if Submission.query.filter_by(student_id=student.id).first() is not None:
+        blockers.append("homework submissions")
+    if TestSubmission.query.filter_by(student_id=student.id).first() is not None:
+        blockers.append("test submissions")
+    if (
+        FeePlan.query.filter_by(student_id=student.id).first() is not None
+        or StudentFee.query.filter_by(student_id=student.id).first() is not None
+    ):
+        blockers.append("fee records")
+    if Notification.query.filter_by(user_id=student.user_id).first() is not None:
+        blockers.append("notifications")
+
+    if blockers:
+        raise ApiError(
+            f"Cannot delete: student has existing {', '.join(blockers)}. "
+            "Set the student's status to inactive instead of deleting.",
+            "conflict",
+            409,
+        )
+
     db.session.delete(student.user)
-    db.session.commit()
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        raise ApiError(
+            "Cannot delete: student has existing linked records. "
+            "Set the student's status to inactive instead of deleting.",
+            "conflict",
+            409,
+        )
 
 
 def upload_profile_image(student_id, file_storage):
@@ -155,5 +200,31 @@ def upload_profile_image(student_id, file_storage):
 
     if old_path:
         storage.delete(old_path)
+
+    return student
+
+
+def get_profile_image_url(student_id, role):
+    student = get_student_scoped(student_id, role)
+    if not student.profile_image:
+        raise ApiError("No profile photo on file", "no_profile_image", 404)
+
+    expires_in = current_app.config["RESOURCE_SIGNED_URL_EXPIRY_SECONDS"]
+    url = get_storage_service().get_signed_url(student.profile_image, expires_in)
+    return url, expires_in
+
+
+def remove_profile_image(student_id):
+    student = Student.query.get(student_id)
+    if student is None:
+        raise not_found("Student")
+
+    old_path = student.profile_image
+    student.profile_image = None
+    student.face_embedding = None
+    db.session.commit()
+
+    if old_path:
+        get_storage_service().delete(old_path)
 
     return student

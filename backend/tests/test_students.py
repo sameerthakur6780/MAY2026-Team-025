@@ -1,5 +1,9 @@
 """/api/students CRUD, role-scoped."""
 
+from datetime import date
+
+from app.extensions import db
+from app.models.attendance import Attendance, AttendanceMethod, AttendanceStatus
 from app.models.user import User
 from conftest import (
     create_admin_user,
@@ -281,3 +285,86 @@ def test_delete_student_cascades_to_user_row(admin, app):
         assert User.query.get(user_id) is None
 
     assert admin.get(f"/api/students/{student_id}").status_code == 404
+
+
+def test_delete_student_with_attendance_is_conflict(admin, app):
+    school_class = create_class(9)
+    admin_user = create_admin_user()
+    student_row = create_student(class_id=school_class.id)
+
+    with app.app_context():
+        db.session.add(
+            Attendance(
+                student_id=student_row.id,
+                class_id=school_class.id,
+                date=date(2026, 1, 1),
+                status=AttendanceStatus.PRESENT,
+                marked_by=admin_user.id,
+                method=AttendanceMethod.MANUAL,
+            )
+        )
+        db.session.commit()
+
+    resp = admin.delete(f"/api/students/{student_row.id}")
+    assert resp.status_code == 409
+    assert resp.get_json()["error"] == "conflict"
+
+    # The student (and its attendance history) must still exist.
+    assert admin.get(f"/api/students/{student_row.id}").status_code == 200
+
+
+# ---------------------------------------------------------------------------
+# Student profile image
+# ---------------------------------------------------------------------------
+
+
+def _upload_profile_image(authed, student_id, filename="face.jpg", content=b"fake-image-bytes"):
+    import io
+
+    return authed.post(
+        f"/api/students/{student_id}/profile-image",
+        data={"file": (io.BytesIO(content), filename)},
+        content_type="multipart/form-data",
+    )
+
+
+def test_upload_profile_image_success(admin, monkeypatch):
+    student_row = create_student()
+    monkeypatch.setattr("app.services.student_service.compute_profile_embedding", lambda _b: [0.1] * 128)
+
+    resp = _upload_profile_image(admin, student_row.id)
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert body["has_face_embedding"] is True
+    assert body["profile_image"] is not None
+
+
+def test_get_profile_image_signed_url(admin, monkeypatch):
+    student_row = create_student()
+    monkeypatch.setattr("app.services.student_service.compute_profile_embedding", lambda _b: [0.1] * 128)
+    _upload_profile_image(admin, student_row.id)
+
+    resp = admin.get(f"/api/students/{student_row.id}/profile-image")
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert body["url"].startswith("https://fake-storage.test/profile-images/")
+    assert body["expires_in"] == 300
+
+
+def test_get_profile_image_not_found_when_missing(admin):
+    student_row = create_student()
+    resp = admin.get(f"/api/students/{student_row.id}/profile-image")
+    assert resp.status_code == 404
+    assert resp.get_json()["error"] == "no_profile_image"
+
+
+def test_delete_profile_image_clears_embedding(admin, monkeypatch):
+    student_row = create_student()
+    monkeypatch.setattr("app.services.student_service.compute_profile_embedding", lambda _b: [0.1] * 128)
+    _upload_profile_image(admin, student_row.id)
+
+    resp = admin.delete(f"/api/students/{student_row.id}/profile-image")
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert body["has_face_embedding"] is False
+    assert body["profile_image"] is None

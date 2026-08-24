@@ -77,8 +77,9 @@ def bulk_mark():
     except ValidationError as exc:
         return jsonify({"error": "validation_error", "message": exc.messages}), 400
 
+    role = get_jwt()["role"]
     created, skipped_student_ids = bulk_mark_attendance(
-        data["class_id"], data["date"], data["entries"], data["method"], current_user.id
+        data["class_id"], data["date"], data["entries"], data["method"], current_user.id, role
     )
     return (
         jsonify(
@@ -100,8 +101,9 @@ def mark_attendance_facial_route():
     except ValidationError as exc:
         return jsonify({"error": "validation_error", "message": exc.messages}), 400
 
+    role = get_jwt()["role"]
     file_storage = request.files.get("image")
-    result = mark_attendance_facial(data["class_id"], data["date"], file_storage, current_user.id)
+    result = mark_attendance_facial(data["class_id"], data["date"], file_storage, current_user.id, role)
     return jsonify(result), 200
 
 
@@ -114,5 +116,6 @@ def update_attendance_route(attendance_id):
     except ValidationError as exc:
         return jsonify({"error": "validation_error", "message": exc.messages}), 400
 
-    attendance = update_attendance(attendance_id, data)
+    role = get_jwt()["role"]
+    attendance = update_attendance(attendance_id, data, role)
     return jsonify(serialize_attendance(attendance)), 200

@@ -2,6 +2,7 @@ import { useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import AttendanceMarkView from "@/components/attendance/AttendanceMarkView";
 import AttendanceHistoryView from "@/components/attendance/AttendanceHistoryView";
+import AiAttendanceView from "@/components/attendance/AiAttendanceView";
 import { TEACHER_NAV } from "@/lib/navConfig";
 import { Button } from "@/components/ui/button";
 
@@ -24,6 +25,14 @@ export default function TeacherAttendance() {
           Mark attendance
         </Button>
         <Button
+          data-testid="view-ai"
+          variant={view === "ai" ? "default" : "outline"}
+          className={view === "ai" ? "bg-coral hover:bg-coral-deep text-ink rounded-pill px-5" : "border-soft rounded-full px-5"}
+          onClick={() => setView("ai")}
+        >
+          AI photo
+        </Button>
+        <Button
           data-testid="view-history"
           variant={view === "history" ? "default" : "outline"}
           className={view === "history" ? "bg-coral hover:bg-coral-deep text-ink rounded-pill px-5" : "border-soft rounded-full px-5"}
@@ -33,7 +42,7 @@ export default function TeacherAttendance() {
         </Button>
       </div>
 
-      {view === "mark" ? <AttendanceMarkView /> : <AttendanceHistoryView />}
+      {view === "mark" ? <AttendanceMarkView /> : view === "ai" ? <AiAttendanceView /> : <AttendanceHistoryView />}
     </DashboardLayout>
   );
 }

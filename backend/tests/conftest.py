@@ -133,6 +133,8 @@ def app():
 def fake_storage(app, monkeypatch):
     fake = FakeStorageService()
     monkeypatch.setattr("app.services.resource_service.get_storage_service", lambda: fake)
+    monkeypatch.setattr("app.services.storage.get_storage_service", lambda: fake)
+    monkeypatch.setattr("app.services.student_service.get_storage_service", lambda: fake)
     return fake
 
 

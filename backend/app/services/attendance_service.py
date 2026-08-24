@@ -9,10 +9,10 @@ from app.extensions import db
 from app.models.academic import SchoolClass
 from app.models.attendance import Attendance, AttendanceMethod, AttendanceStatus
 from app.models.student import Student
-from app.services.facial_recognition import detect_faces, match_embedding
+from app.services.facial_recognition import crop_face_thumbnail, detect_faces, match_embedding
 from app.services.notification_service import NotificationService
 from app.utils.errors import ApiError, forbidden, not_found
-from app.utils.scoping import current_parent, current_student, current_teacher, teacher_class_ids
+from app.utils.scoping import assert_can_manage_class, current_parent, current_student, current_teacher, teacher_class_ids
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +41,8 @@ def get_attendance_or_404(attendance_id):
     return attendance
 
 
-def bulk_mark_attendance(class_id, date, entries, method, marked_by):
+def bulk_mark_attendance(class_id, date, entries, method, marked_by, role):
+    assert_can_manage_class(role, class_id)
     if SchoolClass.query.get(class_id) is None:
         raise not_found("Class")
 
@@ -110,7 +111,8 @@ def bulk_mark_attendance(class_id, date, entries, method, marked_by):
     return created, sorted(existing_student_ids)
 
 
-def mark_attendance_facial(class_id, date, file_storage, marked_by):
+def mark_attendance_facial(class_id, date, file_storage, marked_by, role):
+    assert_can_manage_class(role, class_id)
     if not file_storage or not file_storage.filename:
         raise ApiError("No image was uploaded", "missing_file", 400)
 
@@ -146,17 +148,26 @@ def mark_attendance_facial(class_id, date, file_storage, marked_by):
     auto_match_by_student = {}
     needs_confirmation = []
 
+    def _confirmation_entry(idx, face, student_id, confidence):
+        entry = {
+            "face_index": idx,
+            "best_match_student_id": student_id,
+            "confidence": round(confidence, 3) if confidence is not None else None,
+        }
+        thumbnail = crop_face_thumbnail(image_bytes, face["bbox"])
+        if thumbnail:
+            entry["thumbnail"] = thumbnail
+        return entry
+
     for idx, face in enumerate(faces):
         student_id, confidence = match_embedding(face["embedding"], candidate_pairs)
         if student_id is not None and confidence >= high:
             if student_id not in auto_match_by_student or confidence > auto_match_by_student[student_id]:
                 auto_match_by_student[student_id] = confidence
         elif student_id is not None and confidence >= low:
-            needs_confirmation.append(
-                {"face_index": idx, "best_match_student_id": student_id, "confidence": round(confidence, 3)}
-            )
+            needs_confirmation.append(_confirmation_entry(idx, face, student_id, confidence))
         else:
-            needs_confirmation.append({"face_index": idx, "best_match_student_id": None, "confidence": None})
+            needs_confirmation.append(_confirmation_entry(idx, face, None, None))
 
     # A face that ended up auto-marked doesn't also need to be listed as
     # "needs confirmation" just because a second, weaker-matching face also
@@ -167,7 +178,7 @@ def mark_attendance_facial(class_id, date, file_storage, marked_by):
 
     entries = [{"student_id": sid, "status": "present"} for sid in auto_match_by_student]
     if entries:
-        created, skipped_student_ids = bulk_mark_attendance(class_id, date, entries, "facial", marked_by)
+        created, skipped_student_ids = bulk_mark_attendance(class_id, date, entries, "facial", marked_by, role)
     else:
         created, skipped_student_ids = [], []
 
@@ -187,8 +198,9 @@ def mark_attendance_facial(class_id, date, file_storage, marked_by):
     }
 
 
-def update_attendance(attendance_id, data):
+def update_attendance(attendance_id, data, role):
     attendance = get_attendance_or_404(attendance_id)
+    assert_can_manage_class(role, attendance.class_id)
     if "status" in data:
         attendance.status = AttendanceStatus(data["status"])
     if "method" in data:
