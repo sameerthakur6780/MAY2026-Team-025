@@ -65,7 +65,7 @@ def download_resource(resource_id):
 
 
 @resources_bp.post("")
-@role_required("admin", "teacher")
+@role_required("teacher")
 def upload_resource():
     try:
         data = _upload_schema.load(request.form.to_dict())
@@ -75,10 +75,10 @@ def upload_resource():
     file_storage = request.files.get("file")
     resource = create_resource(file_storage, data["type"], data["subject_id"], data["class_id"], current_user.id)
 
-    # Admin-uploaded PDFs feed the student AI assistant directly -- index them
+    # Teacher-uploaded PDFs feed the student AI assistant directly -- index them
     # automatically instead of requiring a separate manual ingest call, then
-    # email the uploading admin once indexing finishes (see resource_service).
-    if get_jwt()["role"] == "admin" and resource.type == ResourceType.PDF:
+    # email the uploading teacher once indexing finishes (see resource_service).
+    if get_jwt()["role"] == "teacher" and resource.type == ResourceType.PDF:
         queue_pdf_ingestion(resource, current_user.email, current_user.full_name)
 
     return jsonify(serialize_resource(resource)), 201

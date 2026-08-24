@@ -64,7 +64,7 @@ def get_test(test_id):
 
 
 @tests_bp.post("")
-@role_required("admin", "teacher")
+@role_required("teacher")
 def create_test_route():
     raw = request.get_json(silent=True) or {}
     try:
@@ -77,7 +77,7 @@ def create_test_route():
 
 
 @tests_bp.patch("/<int:test_id>")
-@role_required("admin", "teacher")
+@role_required("teacher")
 def update_test_route(test_id):
     raw = request.get_json(silent=True) or {}
     try:
@@ -106,7 +106,7 @@ def get_evaluation_route(test_id):
 
 
 @tests_bp.post("/<int:test_id>/evaluation")
-@role_required("admin", "teacher")
+@role_required("teacher")
 def schedule_evaluation_route(test_id):
     role = get_jwt()["role"]
     get_test_scoped(test_id, role)
@@ -120,7 +120,7 @@ def schedule_evaluation_route(test_id):
 
 
 @tests_bp.post("/<int:test_id>/evaluation/run")
-@role_required("admin", "teacher")
+@role_required("teacher")
 def run_evaluation_route(test_id):
     role = get_jwt()["role"]
     get_test_scoped(test_id, role)
@@ -129,7 +129,7 @@ def run_evaluation_route(test_id):
 
 
 @tests_bp.delete("/<int:test_id>/evaluation")
-@role_required("admin", "teacher")
+@role_required("teacher")
 def cancel_evaluation_route(test_id):
     role = get_jwt()["role"]
     get_test_scoped(test_id, role)
