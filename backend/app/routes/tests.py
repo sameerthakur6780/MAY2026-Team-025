@@ -2,7 +2,13 @@ from flask import Blueprint, jsonify, request
 from flask_jwt_extended import current_user, get_jwt
 from marshmallow import ValidationError
 
-from app.schemas.test_schema import TestCreateSchema, TestUpdateSchema
+from app.services.ai_grading_service import (
+    cancel_evaluation,
+    get_evaluation_status,
+    run_evaluation_now,
+    schedule_evaluation,
+)
+from app.schemas.test_schema import EvaluationScheduleSchema, TestCreateSchema, TestUpdateSchema
 from app.services.test_service import (
     create_test,
     get_test_scoped,
@@ -19,6 +25,7 @@ tests_bp = Blueprint("tests", __name__, url_prefix="/api/tests")
 
 _create_schema = TestCreateSchema()
 _update_schema = TestUpdateSchema()
+_schedule_schema = EvaluationScheduleSchema()
 
 _ALL_ROLES = ("admin", "teacher", "parent", "student")
 
@@ -88,3 +95,43 @@ def submit_test_route(test_id):
     file_storage = request.files.get("file")
     submission = submit_test(test_id, file_storage, current_student().id)
     return jsonify(serialize_submission(submission)), 201
+
+
+@tests_bp.get("/<int:test_id>/evaluation")
+@role_required(*_ALL_ROLES)
+def get_evaluation_route(test_id):
+    role = get_jwt()["role"]
+    get_test_scoped(test_id, role)
+    return jsonify(get_evaluation_status(test_id)), 200
+
+
+@tests_bp.post("/<int:test_id>/evaluation")
+@role_required("admin", "teacher")
+def schedule_evaluation_route(test_id):
+    role = get_jwt()["role"]
+    get_test_scoped(test_id, role)
+    raw = request.get_json(silent=True) or {}
+    try:
+        data = _schedule_schema.load(raw)
+    except ValidationError as exc:
+        return jsonify({"error": "validation_error", "message": exc.messages}), 400
+    test = schedule_evaluation(test_id, data["scheduled_at"])
+    return jsonify(get_evaluation_status(test.id)), 201
+
+
+@tests_bp.post("/<int:test_id>/evaluation/run")
+@role_required("admin", "teacher")
+def run_evaluation_route(test_id):
+    role = get_jwt()["role"]
+    get_test_scoped(test_id, role)
+    test = run_evaluation_now(test_id)
+    return jsonify(get_evaluation_status(test.id)), 202
+
+
+@tests_bp.delete("/<int:test_id>/evaluation")
+@role_required("admin", "teacher")
+def cancel_evaluation_route(test_id):
+    role = get_jwt()["role"]
+    get_test_scoped(test_id, role)
+    test = cancel_evaluation(test_id)
+    return jsonify(get_evaluation_status(test.id)), 200

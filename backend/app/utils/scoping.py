@@ -37,3 +37,12 @@ def teacher_class_ids(teacher):
         .all()
     )
     return [row[0] for row in rows]
+
+
+def assert_can_manage_class(role, class_id):
+    """Write guard for attendance and similar class-scoped mutations."""
+    if role == "admin":
+        return
+    if role == "teacher" and class_id in teacher_class_ids(current_teacher()):
+        return
+    raise forbidden("You are not assigned to this class")

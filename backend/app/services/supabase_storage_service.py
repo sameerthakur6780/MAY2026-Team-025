@@ -37,6 +37,14 @@ class SupabaseStorageService(StorageService):
         # model its own type stubs suggest) -- verified against the live API.
         return result["signedURL"]
 
+    def download(self, path):
+        try:
+            return self._bucket().download(path)
+        except StorageApiError as exc:
+            raise ApiError(f"File download failed: {exc.message}", "storage_error", 502) from exc
+        except NETWORK_ERRORS as exc:
+            raise ApiError("File download failed: the storage service didn't respond in time.", "storage_timeout", 502) from exc
+
     def delete(self, path):
         try:
             self._bucket().remove([path])

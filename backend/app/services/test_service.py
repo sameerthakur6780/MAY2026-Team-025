@@ -3,7 +3,7 @@ from sqlalchemy.orm import joinedload
 
 from app.extensions import db
 from app.models.academic import SchoolClass, Subject
-from app.models.resource import Resource
+from app.models.resource import Resource, ResourceType
 from app.models.test import Test
 from app.utils.errors import ApiError, forbidden, not_found
 from app.utils.scoping import current_parent, current_student, current_teacher, teacher_class_ids
@@ -22,7 +22,14 @@ def serialize_test(test):
         "created_by": test.created_by,
         "creator_name": test.creator.full_name,
         "resource_id": test.resource_id,
+        "question_paper_resource_id": test.question_paper_resource_id,
+        "answer_key_resource_id": test.answer_key_resource_id,
         "max_marks": test.max_marks,
+        "evaluation_status": test.evaluation_status.value if test.evaluation_status else "not_scheduled",
+        "evaluation_scheduled_at": test.evaluation_scheduled_at.isoformat() if test.evaluation_scheduled_at else None,
+        "evaluation_started_at": test.evaluation_started_at.isoformat() if test.evaluation_started_at else None,
+        "evaluation_completed_at": test.evaluation_completed_at.isoformat() if test.evaluation_completed_at else None,
+        "evaluation_error": test.evaluation_error,
         "created_at": test.created_at.isoformat(),
         "updated_at": test.updated_at.isoformat(),
     }
@@ -35,7 +42,7 @@ def get_test_or_404(test_id):
     return test
 
 
-def _validate_resource_for_class(resource_id, class_id):
+def _validate_resource_for_class(resource_id, class_id, resource_type=None):
     if resource_id is None:
         return
     resource = Resource.query.get(resource_id)
@@ -43,6 +50,8 @@ def _validate_resource_for_class(resource_id, class_id):
         raise not_found("Resource")
     if resource.class_id != class_id:
         raise ApiError("resource_id does not belong to this class", "invalid_resource_class", 400)
+    if resource_type is not None and resource.type != resource_type:
+        raise ApiError(f"resource must be of type {resource_type.value}", "invalid_resource_type", 400)
 
 
 def create_test(data, created_by):
@@ -51,6 +60,10 @@ def create_test(data, created_by):
     if Subject.query.get(data["subject_id"]) is None:
         raise not_found("Subject")
     _validate_resource_for_class(data.get("resource_id"), data["class_id"])
+    _validate_resource_for_class(
+        data.get("question_paper_resource_id"), data["class_id"], ResourceType.QUESTION_PAPER
+    )
+    _validate_resource_for_class(data.get("answer_key_resource_id"), data["class_id"], ResourceType.ANSWER_KEY)
 
     test = Test(
         class_id=data["class_id"],
@@ -60,6 +73,8 @@ def create_test(data, created_by):
         due_date=data["due_date"],
         created_by=created_by,
         resource_id=data.get("resource_id"),
+        question_paper_resource_id=data.get("question_paper_resource_id"),
+        answer_key_resource_id=data.get("answer_key_resource_id"),
         max_marks=data["max_marks"],
     )
     db.session.add(test)
@@ -77,8 +92,28 @@ def update_test(test_id, data):
     if "resource_id" in data:
         effective_class_id = data.get("class_id", test.class_id)
         _validate_resource_for_class(data["resource_id"], effective_class_id)
+    if "question_paper_resource_id" in data:
+        effective_class_id = data.get("class_id", test.class_id)
+        _validate_resource_for_class(
+            data["question_paper_resource_id"], effective_class_id, ResourceType.QUESTION_PAPER
+        )
+    if "answer_key_resource_id" in data:
+        effective_class_id = data.get("class_id", test.class_id)
+        _validate_resource_for_class(
+            data["answer_key_resource_id"], effective_class_id, ResourceType.ANSWER_KEY
+        )
 
-    for field in ("class_id", "subject_id", "title", "description", "due_date", "resource_id", "max_marks"):
+    for field in (
+        "class_id",
+        "subject_id",
+        "title",
+        "description",
+        "due_date",
+        "resource_id",
+        "question_paper_resource_id",
+        "answer_key_resource_id",
+        "max_marks",
+    ):
         if field in data:
             value = data[field]
             if field == "title" and value:

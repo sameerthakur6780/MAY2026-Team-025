@@ -7,8 +7,10 @@ from app.schemas.student_schema import StudentUpdateSchema
 from app.services.student_service import (
     create_student,
     delete_student,
+    get_profile_image_url,
     get_student_scoped,
     list_students_query,
+    remove_profile_image,
     serialize_student,
     update_student,
     upload_profile_image,
@@ -94,4 +96,19 @@ def delete_student_route(student_id):
 def upload_profile_image_route(student_id):
     file_storage = request.files.get("file")
     student = upload_profile_image(student_id, file_storage)
+    return jsonify(serialize_student(student)), 200
+
+
+@students_bp.get("/<int:student_id>/profile-image")
+@role_required("admin", "teacher", "parent")
+def get_profile_image_route(student_id):
+    role = get_jwt()["role"]
+    url, expires_in = get_profile_image_url(student_id, role)
+    return jsonify({"url": url, "expires_in": expires_in}), 200
+
+
+@students_bp.delete("/<int:student_id>/profile-image")
+@role_required("admin")
+def delete_profile_image_route(student_id):
+    student = remove_profile_image(student_id)
     return jsonify(serialize_student(student)), 200

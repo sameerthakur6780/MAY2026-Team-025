@@ -270,3 +270,110 @@ def test_update_attendance_invalid_status_validation_error(admin):
 def test_update_attendance_not_found(admin):
     resp = admin.patch("/api/attendance/999999", json={"status": "present"})
     assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Teacher class scoping on writes
+# ---------------------------------------------------------------------------
+
+
+def test_bulk_mark_forbidden_for_unassigned_teacher(make_client):
+    class_a = create_class(1)
+    class_b = create_class(2)
+    subject = create_subject("Maths")
+    teacher_row = create_teacher()
+    create_assignment(class_a.id, subject.id, teacher_row.id)
+    s_in_b = create_student(class_id=class_b.id)
+
+    authed = login_as(make_client(), teacher_row.user.email)
+    resp = _mark(authed, class_b, [{"student_id": s_in_b.id, "status": "present"}])
+    assert resp.status_code == 403
+    assert resp.get_json()["error"] == "forbidden"
+
+
+def test_bulk_mark_facial_method_persists_method(admin):
+    school_class = create_class(1)
+    s1 = create_student(class_id=school_class.id)
+    resp = _mark(admin, school_class, [{"student_id": s1.id, "status": "present"}], method="facial")
+    assert resp.status_code == 201
+    assert resp.get_json()["created"][0]["method"] == "facial"
+
+
+def test_update_attendance_forbidden_for_unassigned_teacher(make_client):
+    from conftest import create_admin_user
+
+    class_a = create_class(1)
+    class_b = create_class(2)
+    subject = create_subject("Maths")
+    teacher_row = create_teacher()
+    create_assignment(class_a.id, subject.id, teacher_row.id)
+
+    admin_authed = login_as(make_client(), create_admin_user().email)
+    s_in_b = create_student(class_id=class_b.id)
+    record_id = _mark(admin_authed, class_b, [{"student_id": s_in_b.id, "status": "absent"}]).get_json()["created"][0]["id"]
+
+    teacher_authed = login_as(make_client(), teacher_row.user.email)
+    resp = teacher_authed.patch(f"/api/attendance/{record_id}", json={"status": "present"})
+    assert resp.status_code == 403
+
+
+def test_facial_attendance_needs_confirmation_includes_thumbnail(admin, monkeypatch):
+    import io
+
+    school_class = create_class(1)
+    s1 = create_student(class_id=school_class.id)
+    s1.face_embedding = [0.1] * 128
+    from app.extensions import db
+
+    db.session.commit()
+
+    fake_face = {"embedding": [0.2] * 128, "bbox": {"x": 10, "y": 10, "w": 40, "h": 40}}
+
+    monkeypatch.setattr(
+        "app.services.attendance_service.detect_faces",
+        lambda _bytes: [fake_face],
+    )
+    monkeypatch.setattr(
+        "app.services.attendance_service.match_embedding",
+        lambda _probe, _candidates: (s1.id, 0.45),
+    )
+    monkeypatch.setattr(
+        "app.services.attendance_service.crop_face_thumbnail",
+        lambda _bytes, _bbox: "data:image/jpeg;base64,abc123",
+    )
+
+    with open("tests/fixtures/person1.jpg", "rb") as fh:
+        image_bytes = fh.read()
+
+    resp = admin.post(
+        "/api/attendance/facial",
+        data={"class_id": str(school_class.id), "date": "2026-01-15", "image": (io.BytesIO(image_bytes), "group.jpg")},
+        content_type="multipart/form-data",
+    )
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert len(body["needs_confirmation"]) == 1
+    assert body["needs_confirmation"][0]["thumbnail"] == "data:image/jpeg;base64,abc123"
+    assert body["needs_confirmation"][0]["best_match_student_id"] == s1.id
+
+
+def test_facial_attendance_forbidden_for_unassigned_teacher(make_client, monkeypatch):
+    import io
+
+    class_a = create_class(1)
+    class_b = create_class(2)
+    subject = create_subject("Maths")
+    teacher_row = create_teacher()
+    create_assignment(class_a.id, subject.id, teacher_row.id)
+
+    monkeypatch.setattr("app.services.attendance_service.detect_faces", lambda _bytes: [])
+
+    authed = login_as(make_client(), teacher_row.user.email)
+    with open("tests/fixtures/person1.jpg", "rb") as fh:
+        image_bytes = fh.read()
+    resp = authed.post(
+        "/api/attendance/facial",
+        data={"class_id": str(class_b.id), "date": "2026-01-15", "image": (io.BytesIO(image_bytes), "group.jpg")},
+        content_type="multipart/form-data",
+    )
+    assert resp.status_code == 403

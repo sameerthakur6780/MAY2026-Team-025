@@ -1,4 +1,4 @@
-import { LayoutDashboard, Wallet, Camera, FolderOpen, BookOpen, ClipboardCheck, Megaphone, Bell, CalendarDays, CalendarClock, MessageCircle, GraduationCap, School, Presentation, Users, ClipboardList } from "lucide-react";
+import { LayoutDashboard, Wallet, Camera, FolderOpen, BookOpen, ClipboardCheck, Megaphone, Bell, CalendarDays, CalendarClock, MessageCircle, GraduationCap, School, Presentation, Users, ClipboardList, FileCheck } from "lucide-react";
 
 export const ADMIN_NAV = [
   { to: "/admin/dashboard", key: "admin-dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -9,6 +9,9 @@ export const ADMIN_NAV = [
   { to: "/admin/assignments", key: "admin-assignments", label: "Assignments", icon: ClipboardList },
   { to: "/admin/attendance", key: "admin-attendance", label: "Attendance", icon: Camera },
   { to: "/admin/resources", key: "admin-resources", label: "Resources", icon: FolderOpen },
+  { to: "/admin/homework", key: "admin-homework", label: "Homework", icon: BookOpen },
+  { to: "/admin/tests", key: "admin-tests", label: "Tests", icon: FileCheck },
+  { to: "/admin/grading", key: "admin-grading", label: "AI Grading", icon: ClipboardCheck },
   { to: "/admin/alerts", key: "admin-alerts", label: "Alerts", icon: Megaphone },
 ];
 
@@ -18,6 +21,7 @@ export const TEACHER_NAV = [
   { to: "/teacher/resources", key: "teacher-resources", label: "Resources", icon: FolderOpen },
   { to: "/teacher/homework", key: "teacher-homework", label: "Homework", icon: BookOpen },
   { to: "/teacher/grading", key: "teacher-grading", label: "AI Grading", icon: ClipboardCheck },
+  { to: "/teacher/tests", key: "teacher-tests", label: "Tests", icon: FileCheck },
 ];
 
 export const PARENT_NAV = [
@@ -26,6 +30,7 @@ export const PARENT_NAV = [
   { to: "/parent/safety", key: "parent-safety", label: "Safety Feed", icon: Bell },
   { to: "/parent/fees", key: "parent-fees", label: "Fees & Pay", icon: Wallet },
   { to: "/parent/resources", key: "parent-resources", label: "Resources", icon: FolderOpen },
+  { to: "/parent/tests", key: "parent-tests", label: "Tests", icon: FileCheck },
 ];
 
 export const STUDENT_NAV = [
@@ -33,5 +38,6 @@ export const STUDENT_NAV = [
   { to: "/student/attendance", key: "student-attendance", label: "Attendance", icon: CalendarClock },
   { to: "/student/resources", key: "student-resources", label: "Resources", icon: FolderOpen },
   { to: "/student/homework", key: "student-homework", label: "Homework", icon: BookOpen },
+  { to: "/student/tests", key: "student-tests", label: "Tests", icon: FileCheck },
   { to: "/student/assistant", key: "student-assistant", label: "AI Assistant", icon: MessageCircle },
 ];
