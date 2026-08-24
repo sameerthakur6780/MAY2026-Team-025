@@ -1,0 +1,14 @@
+{% extends "email/base.html" %}
+{% block title %}New homework: {{ title }}{% endblock %}
+{% block heading %}New homework assigned{% endblock %}
+{% block content %}
+<p style="margin:0 0 20px;text-align:center;color:#1f2328;">
+  Hi {{ recipient_name }}, new homework has been assigned{% if grade %} for Grade {{ grade }}{% endif %}.
+</p>
+<div style="border:1px solid #d0d7de;border-radius:6px;padding:24px;text-align:center;margin:0 0 20px;">
+  <p style="margin:0 0 8px;font-size:13px;color:#656d76;">{{ subject_name }}</p>
+  <p style="margin:0;font-size:22px;font-weight:600;color:#1f2328;">{{ title }}</p>
+  <p style="margin:12px 0 0;font-size:13px;color:#656d76;">Due {{ due_date }}</p>
+</div>
+<p style="margin:0;text-align:center;color:#1f2328;">Log in to SmartBatch to view the full assignment.</p>
+{% endblock %}

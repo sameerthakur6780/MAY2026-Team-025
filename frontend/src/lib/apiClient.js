@@ -40,6 +40,25 @@ export function clearCsrfToken() {
   refreshCsrfToken = null;
 }
 
+// In-memory GET cache, keyed by full path+querystring. Most pages fire
+// several api.get() calls on every mount (dropdown lists like classes/
+// subjects/parents barely ever change) and users bounce between the same
+// few pages repeatedly -- this avoids re-paying a network round trip (each
+// one costing real time against a remote DB) for data that's almost
+// certainly still correct a few seconds later. Any mutating request clears
+// the whole cache rather than trying to invalidate individual keys: this
+// app's resources reference each other constantly (a fee-plan write affects
+// both /api/fee-plans and /api/fees, a student write affects /api/students
+// and every class/parent list that embeds student counts, etc.) --
+// selectively tracking all of that is its own bug surface, and a blunt
+// clear-everything is cheap enough to just always be correct instead.
+const GET_CACHE_TTL_MS = 30_000;
+const getCache = new Map();
+
+export function clearGetCache() {
+  getCache.clear();
+}
+
 export function formatErrorMessage(rawMessage, fallback) {
   if (typeof rawMessage === "string") return rawMessage;
   if (rawMessage && typeof rawMessage === "object") {
@@ -112,7 +131,7 @@ function refreshAccessToken() {
   return refreshPromise;
 }
 
-export async function apiRequest(path, options = {}) {
+async function _requestWithRefresh(path, options) {
   try {
     return await rawRequest(path, options);
   } catch (err) {
@@ -130,11 +149,35 @@ export async function apiRequest(path, options = {}) {
       await refreshAccessToken();
     } catch {
       // refresh failed -- surface the original 401 so the caller can send the user to /login
-      throw err; 
+      throw err;
     }
 
     return rawRequest(path, options);
   }
+}
+
+export async function apiRequest(path, options = {}) {
+  const method = (options.method || "GET").toUpperCase();
+
+  if (method === "GET") {
+    const cached = getCache.get(path);
+    if (cached && Date.now() - cached.timestamp < GET_CACHE_TTL_MS) {
+      return cached.data;
+    }
+  }
+
+  const data = await _requestWithRefresh(path, options);
+
+  if (method === "GET") {
+    getCache.set(path, { data, timestamp: Date.now() });
+  } else {
+    // A write can affect data returned by any number of unrelated-looking
+    // GETs (see the comment on getCache above) -- clear everything rather
+    // than guess which keys are now stale.
+    getCache.clear();
+  }
+
+  return data;
 }
 
 export const api = {

@@ -1,3 +1,5 @@
+from sqlalchemy.orm import joinedload
+
 from app.models.academic import SchoolClass
 from app.models.student import Student
 from app.services.notification_service import NotificationService
@@ -15,6 +17,10 @@ def _recipient_user_ids(class_id):
         if SchoolClass.query.get(class_id) is None:
             raise not_found("SchoolClass")
         query = query.filter_by(class_id=class_id)
+
+    # Without this, student.parent below is a separate query per student --
+    # one extra DB round trip per row instead of one join for the whole batch.
+    query = query.options(joinedload(Student.parent))
 
     user_ids = set()
     for student in query.all():
