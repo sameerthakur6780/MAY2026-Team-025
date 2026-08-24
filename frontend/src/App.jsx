@@ -11,6 +11,8 @@ import TeacherDashboard from "@/pages/teacher/Dashboard";
 import TeacherResources from "@/pages/teacher/Resources";
 import TeacherTests from "@/pages/teacher/Tests";
 import TeacherAttendance from "@/pages/teacher/Attendance";
+import TeacherHomework from "@/pages/teacher/Homework";
+import TeacherGrading from "@/pages/teacher/Grading";
 
 import AdminStudents from "@/pages/admin/Students";
 import AdminClasses from "@/pages/admin/Classes";
@@ -65,6 +67,8 @@ function App() {
             <Route path="/teacher/dashboard" element={<ProtectedRoute role="teacher"><TeacherDashboard /></ProtectedRoute>} />
             <Route path="/teacher/attendance" element={<ProtectedRoute role="teacher"><TeacherAttendance /></ProtectedRoute>} />
             <Route path="/teacher/resources" element={<ProtectedRoute role="teacher"><TeacherResources /></ProtectedRoute>} />
+            <Route path="/teacher/homework" element={<ProtectedRoute role="teacher"><TeacherHomework /></ProtectedRoute>} />
+            <Route path="/teacher/grading" element={<ProtectedRoute role="teacher"><TeacherGrading /></ProtectedRoute>} />
             <Route path="/teacher/tests" element={<ProtectedRoute role="teacher"><TeacherTests /></ProtectedRoute>} />
 
             <Route path="/parent/dashboard" element={<ProtectedRoute role="parent"><ParentDashboard /></ProtectedRoute>} />

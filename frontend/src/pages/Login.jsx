@@ -98,7 +98,11 @@ export default function Login() {
               <button
                 key={r.key}
                 data-testid={`role-tab-${r.key}`}
-                onClick={() => setRole(r.key)}
+                onClick={() => {
+                  setRole(r.key);
+                  setEmail("");
+                  setPassword("");
+                }}
                 className={`flex flex-col items-center gap-1.5 py-3 rounded-pill text-xs font-semibold transition-all duration-200 ${
                   role === r.key ? "bg-white text-ink" : "text-muted-foreground hover:text-foreground"
                 }`}

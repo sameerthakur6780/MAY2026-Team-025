@@ -1,4 +1,5 @@
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import joinedload
 
 from app.extensions import db
 from app.models.academic import ClassSubjectTeacher, SchoolClass, Subject
@@ -24,6 +25,13 @@ def list_assignments_query(class_id=None, teacher_id=None):
         query = query.filter_by(class_id=class_id)
     if teacher_id is not None:
         query = query.filter_by(teacher_id=teacher_id)
+    # serialize_assignment touches school_class/subject/teacher.user on every
+    # row -- eager-load them in one query instead of extra round trips per row.
+    query = query.options(
+        joinedload(ClassSubjectTeacher.school_class),
+        joinedload(ClassSubjectTeacher.subject),
+        joinedload(ClassSubjectTeacher.teacher).joinedload(Teacher.user),
+    )
     return query.order_by(ClassSubjectTeacher.id)
 
 

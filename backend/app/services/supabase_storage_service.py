@@ -25,9 +25,10 @@ class SupabaseStorageService(StorageService):
             raise ApiError("File upload failed: the storage service didn't respond in time. Please try again.", "storage_timeout", 502) from exc
         return path
 
-    def get_signed_url(self, path, expires_in):
+    def get_signed_url(self, path, expires_in, download_filename=None):
         try:
-            result = self._bucket().create_signed_url(path, expires_in)
+            options = {"download": download_filename} if download_filename else None
+            result = self._bucket().create_signed_url(path, expires_in, options)
         except StorageApiError as exc:
             raise ApiError(f"Could not generate a download link: {exc.message}", "storage_error", 502) from exc
         except NETWORK_ERRORS as exc:

@@ -1,6 +1,7 @@
 import logging
 
 from sqlalchemy import false
+from sqlalchemy.orm import joinedload
 
 from app.extensions import db
 from app.models.academic import SchoolClass, Subject
@@ -129,6 +130,11 @@ def list_homework_query(role, class_id=None, subject_id=None):
         query = query.filter(Homework.class_id == class_id)
     if subject_id is not None:
         query = query.filter(Homework.subject_id == subject_id)
+    # serialize_homework touches school_class/subject/creator on every row --
+    # eager-load them in one query instead of 3 extra round trips per row.
+    query = query.options(
+        joinedload(Homework.school_class), joinedload(Homework.subject), joinedload(Homework.creator)
+    )
     return query.order_by(Homework.due_date.desc())
 
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import EmptyState from "@/components/EmptyState";
-import { ADMIN_NAV } from "@/lib/navConfig";
+import { TEACHER_NAV } from "@/lib/navConfig";
 import { api, ApiError } from "@/lib/apiClient";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { ClipboardCheck, Download } from "lucide-react";
 import { toast } from "sonner";
 
-export default function AdminGrading() {
+export default function TeacherGrading() {
   const [loading, setLoading] = useState(true);
   const [queue, setQueue] = useState([]);
   const [formByKey, setFormByKey] = useState({});
@@ -111,7 +111,7 @@ export default function AdminGrading() {
   };
 
   return (
-    <DashboardLayout title="Grading" subtitle="Review submitted homework and tests, then enter marks." nav={ADMIN_NAV}>
+    <DashboardLayout title="Grading" subtitle="Review submitted homework and tests, then enter marks." nav={TEACHER_NAV}>
       {loading ? (
         <div className="space-y-3">
           {Array.from({ length: 4 }).map((_, i) => (

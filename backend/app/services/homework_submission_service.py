@@ -6,6 +6,7 @@ from pathlib import Path
 from flask import current_app
 from sqlalchemy import false
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import joinedload
 from werkzeug.utils import secure_filename
 
 from app.extensions import db
@@ -157,6 +158,9 @@ def list_submissions_query(role, homework_id=None, student_id=None, status=None)
         query = query.filter(Submission.student_id == student_id)
     if status is not None:
         query = query.filter(Submission.status == SubmissionStatus(status))
+    # serialize_submission touches student.user and grader on every row --
+    # eager-load them in one query instead of extra round trips per row.
+    query = query.options(joinedload(Submission.student).joinedload(Student.user), joinedload(Submission.grader))
     return query.order_by(Submission.submitted_at.desc())
 
 

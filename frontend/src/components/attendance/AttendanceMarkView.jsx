@@ -259,7 +259,7 @@ export default function AttendanceMarkView() {
                   <>
                     <div className="flex items-center gap-2 text-sm font-medium text-yellow">
                       <SkipForward className="w-4 h-4" /> {lastResult.skippedNames.length} already marked for{" "}
-                      {date} (unchanged -- use the Status column above to correct one)
+                      {date}
                     </div>
                     <div className="text-xs text-muted-foreground pl-6">{lastResult.skippedNames.join(", ")}</div>
                   </>

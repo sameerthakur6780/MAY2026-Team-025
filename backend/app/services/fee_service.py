@@ -22,6 +22,7 @@ from datetime import date, datetime, time, timedelta, timezone
 from apscheduler.triggers.cron import CronTrigger
 from flask import current_app
 from sqlalchemy import false
+from sqlalchemy.orm import joinedload
 
 from app.extensions import db, scheduler
 from app.models.fee import FeePlan, FeeStatus, StudentFee
@@ -93,6 +94,9 @@ def list_fee_plans_query(student_id=None):
     query = FeePlan.query
     if student_id is not None:
         query = query.filter_by(student_id=student_id)
+    # serialize_fee_plan touches student.user on every row -- eager-load it
+    # in one query instead of 2 extra round trips per row.
+    query = query.options(joinedload(FeePlan.student).joinedload(Student.user))
     return query.order_by(FeePlan.created_at.desc())
 
 
@@ -203,6 +207,9 @@ def list_fees_query(role, class_id=None, status=None):
         query = query.join(Student, StudentFee.student_id == Student.id).filter(Student.class_id == class_id)
     if status is not None:
         query = query.filter(StudentFee.status == FeeStatus(status))
+    # serialize_student_fee touches student.user on every row -- eager-load
+    # it in one query instead of 2 extra round trips per row.
+    query = query.options(joinedload(StudentFee.student).joinedload(Student.user))
     return query.order_by(StudentFee.due_date.desc())
 
 
