@@ -12,7 +12,7 @@ There are four user roles: **Admin, Teacher, Parent, Student**, each with their 
 ## Architecture
 
 ![Class diagram](docs/class-diagram.png)
-![DB diagram](docs/db-diagram.jpg)
+![DB diagram](docs/db-diagram.png)
 
 ## Tech stack
 
