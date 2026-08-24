@@ -1,3 +1,5 @@
+import logging
+import threading
 import uuid
 from pathlib import Path
 
@@ -11,9 +13,13 @@ from app.models.academic import SchoolClass, Subject
 from app.models.homework import Homework
 from app.models.resource import Resource, ResourceType
 from app.models.test import Test
+from app.models.test_evaluation import EvaluationStatus
+from app.services.email import send_email
 from app.services.storage import get_storage_service
 from app.utils.errors import ApiError, forbidden, not_found
 from app.utils.scoping import current_parent, current_student, current_teacher, teacher_class_ids
+
+logger = logging.getLogger(__name__)
 
 
 def serialize_resource(resource):
@@ -81,6 +87,59 @@ def create_resource(file_storage, resource_type, subject_id, class_id, uploaded_
     return resource
 
 
+def _run_ingestion_and_notify(app, resource_id, notify_email, notify_name):
+    with app.app_context():
+        # Local import: assistant_service pulls in the rag package (Gemini/
+        # Pinecone clients), which we don't want loaded for every request
+        # that merely imports resource_service.
+        from app.services.assistant_service import ingest_resource_pdf
+
+        try:
+            result = ingest_resource_pdf(resource_id)
+        except Exception:
+            # Best-effort, fire-and-forget job -- nothing is waiting on this,
+            # so log and move on rather than raise on a background thread
+            # where nothing would catch it (see email.py's send_email).
+            logger.exception("Automatic ingestion failed for resource %s", resource_id)
+            return
+
+        resource = Resource.query.get(resource_id)
+        send_email(
+            notify_email,
+            "Resource indexed for the AI assistant",
+            "resource_ingested",
+            recipient_name=notify_name,
+            filename=resource.filename if resource else "your uploaded file",
+            chunks_indexed=result.chunks_indexed,
+            skipped=result.skipped,
+        )
+
+
+def queue_pdf_ingestion(resource, notify_email, notify_name):
+    """Fire-and-forget: indexes `resource` into the RAG store off-thread, then
+    emails `notify_email` on success. Mirrors send_email()'s background-thread
+    pattern so the upload request doesn't wait on Gemini embeddings + Pinecone
+    writes; runs synchronously under TESTING for the same determinism reason.
+    """
+    app = current_app._get_current_object()
+    if app.testing:
+        _run_ingestion_and_notify(app, resource.id, notify_email, notify_name)
+    else:
+        threading.Thread(
+            target=_run_ingestion_and_notify,
+            args=(app, resource.id, notify_email, notify_name),
+            daemon=True,
+        ).start()
+
+
+def _answer_key_visible_to_student_or_parent(resource_id):
+    """Answer keys are hidden until the owning test's evaluation completes."""
+    test = Test.query.filter_by(answer_key_resource_id=resource_id).first()
+    if test is None:
+        return False
+    return test.evaluation_status == EvaluationStatus.COMPLETED
+
+
 def _scoped_query(role):
     query = Resource.query
     if role == "admin":
@@ -90,13 +149,32 @@ def _scoped_query(role):
         return query.filter(Resource.class_id.in_(class_ids)) if class_ids else query.filter(false())
     if role == "parent":
         class_ids = {s.class_id for s in current_parent().students if s.class_id is not None}
-        return query.filter(Resource.class_id.in_(class_ids)) if class_ids else query.filter(false())
-    if role == "student":
+        if not class_ids:
+            return query.filter(false())
+        query = query.filter(Resource.class_id.in_(class_ids))
+    elif role == "student":
         student = current_student()
         if student.class_id is None:
             return query.filter(false())
-        return query.filter(Resource.class_id == student.class_id)
-    raise forbidden()
+        query = query.filter(Resource.class_id == student.class_id)
+    else:
+        raise forbidden()
+
+    if role in ("parent", "student"):
+        visible_answer_keys = [
+            row[0]
+            for row in Test.query.filter(
+                Test.evaluation_status == EvaluationStatus.COMPLETED,
+                Test.answer_key_resource_id.isnot(None),
+            ).with_entities(Test.answer_key_resource_id)
+        ]
+        query = query.filter(
+            db.or_(
+                Resource.type != ResourceType.ANSWER_KEY,
+                Resource.id.in_(visible_answer_keys) if visible_answer_keys else false(),
+            )
+        )
+    return query
 
 
 def list_resources_query(role, class_id=None, subject_id=None):
@@ -126,9 +204,13 @@ def get_resource_scoped(resource_id, role):
         child_class_ids = {s.class_id for s in current_parent().students}
         if resource.class_id not in child_class_ids:
             raise forbidden()
+        if resource.type == ResourceType.ANSWER_KEY and not _answer_key_visible_to_student_or_parent(resource.id):
+            raise forbidden()
         return resource
     if role == "student":
         if resource.class_id != current_student().class_id:
+            raise forbidden()
+        if resource.type == ResourceType.ANSWER_KEY and not _answer_key_visible_to_student_or_parent(resource.id):
             raise forbidden()
         return resource
     raise forbidden()

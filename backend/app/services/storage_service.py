@@ -19,5 +19,9 @@ class StorageService(ABC):
         instead of opening it inline."""
 
     @abstractmethod
+    def download(self, path):
+        """Returns the raw bytes stored at `path`."""
+
+    @abstractmethod
     def delete(self, path):
         """Deletes the object at `path`."""

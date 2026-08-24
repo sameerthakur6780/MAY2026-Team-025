@@ -69,7 +69,16 @@ export default function StudentDashboard() {
             <Card className="lg:col-span-2 border-soft shadow-none">
               <CardContent className="p-6">
                 <div className="text-xs tracking-[0.2em] uppercase font-bold text-muted-foreground">This month</div>
-                <div className="font-display text-xl font-semibold mt-1 mb-5">Upcoming tests</div>
+                <div className="flex items-center justify-between mt-1 mb-5">
+                  <div className="font-display text-xl font-semibold">Upcoming tests</div>
+                  <Link
+                    to="/student/tests"
+                    className="text-sm font-medium text-coral hover:underline inline-flex items-center gap-1"
+                    data-testid="link-view-tests"
+                  >
+                    View all <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
                 {upcomingTests.length === 0 ? (
                   <p className="text-sm text-muted-foreground py-8 text-center">No upcoming tests scheduled.</p>
                 ) : (

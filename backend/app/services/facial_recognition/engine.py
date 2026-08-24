@@ -2,6 +2,8 @@
 deepface/cv2/numpy directly -- swapping the underlying library later means
 changing only this file."""
 
+import base64
+
 import cv2
 import numpy as np
 from flask import current_app
@@ -52,6 +54,28 @@ def compute_profile_embedding(image_bytes):
             "multiple_faces_detected",
         )
     return faces[0]["embedding"]
+
+
+def crop_face_thumbnail(image_bytes, bbox):
+    """Crop a face region from the source image and return a data-URI JPEG."""
+    image = _decode_image(image_bytes)
+    x = int(bbox.get("x", 0))
+    y = int(bbox.get("y", 0))
+    w = int(bbox.get("w", 0))
+    h = int(bbox.get("h", 0))
+    img_h, img_w = image.shape[:2]
+    x1 = max(0, x)
+    y1 = max(0, y)
+    x2 = min(img_w, x + w)
+    y2 = min(img_h, y + h)
+    if x2 <= x1 or y2 <= y1:
+        return None
+    crop = image[y1:y2, x1:x2]
+    ok, buf = cv2.imencode(".jpg", crop)
+    if not ok:
+        return None
+    encoded = base64.b64encode(buf.tobytes()).decode("ascii")
+    return f"data:image/jpeg;base64,{encoded}"
 
 
 def detect_faces(image_bytes):

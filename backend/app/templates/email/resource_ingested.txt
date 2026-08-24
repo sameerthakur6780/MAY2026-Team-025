@@ -1,0 +1,11 @@
+Hi {{ recipient_name }},
+
+Your resource "{{ filename }}" has been successfully processed for the AI assistant.
+{% if skipped %}
+It was already up to date, so no re-indexing was needed.
+{% else %}
+{{ chunks_indexed }} chunk(s) were indexed and are now searchable by students.
+{% endif %}
+Thank you!
+
+- SmartBatch

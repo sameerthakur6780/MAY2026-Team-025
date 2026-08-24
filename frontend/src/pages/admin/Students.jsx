@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import Pagination from "@/components/Pagination";
 import EmptyState from "@/components/EmptyState";
@@ -6,6 +6,7 @@ import ConfirmDialog from "@/components/ConfirmDialog";
 import { ADMIN_NAV } from "@/lib/navConfig";
 import { usePaginatedList } from "@/hooks/usePaginatedList";
 import { api, ApiError } from "@/lib/apiClient";
+import { uploadWithProgress } from "@/lib/uploadWithProgress";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,9 +17,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { GraduationCap, Plus, Pencil, Trash2 } from "lucide-react";
+import { GraduationCap, Plus, Pencil, Trash2, Camera, UploadCloud } from "lucide-react";
 
 const NONE = "none";
+const ALLOWED_PHOTO_EXTENSIONS = ["jpg", "jpeg", "png"];
+const MAX_PHOTO_SIZE_BYTES = 20 * 1024 * 1024;
 
 function StatusBadge({ status }) {
   const styles = {
@@ -27,6 +30,45 @@ function StatusBadge({ status }) {
     withdrawn: "bg-coral text-ink border-0",
   };
   return <Badge className={styles[status] || styles.inactive}>{status}</Badge>;
+}
+
+function validatePhotoFile(file) {
+  const ext = file.name.split(".").pop()?.toLowerCase();
+  if (!ext || !ALLOWED_PHOTO_EXTENSIONS.includes(ext)) {
+    return `File type .${ext || "?"} isn't allowed. Allowed: ${ALLOWED_PHOTO_EXTENSIONS.join(", ")}`;
+  }
+  if (file.size > MAX_PHOTO_SIZE_BYTES) {
+    return `File exceeds the ${MAX_PHOTO_SIZE_BYTES / (1024 * 1024)}MB size limit`;
+  }
+  if (file.size === 0) {
+    return "File is empty";
+  }
+  return null;
+}
+
+function StudentPhotoThumb({ student }) {
+  const [url, setUrl] = useState(null);
+
+  useEffect(() => {
+    if (!student.profile_image) {
+      setUrl(null);
+      return;
+    }
+    api
+      .get(`/api/students/${student.id}/profile-image`)
+      .then((d) => setUrl(d.url))
+      .catch(() => setUrl(null));
+  }, [student.id, student.profile_image]);
+
+  if (url) {
+    return <img src={url} alt={student.full_name} className="w-9 h-9 rounded-full object-cover border border-soft" />;
+  }
+
+  return (
+    <div className="w-9 h-9 rounded-full bg-surface-2 flex items-center justify-center text-xs font-semibold text-muted-foreground">
+      {student.full_name?.[0] || "?"}
+    </div>
+  );
 }
 
 function emptyForm() {
@@ -61,6 +103,14 @@ export default function AdminStudents() {
   const [form, setForm] = useState(emptyForm());
   const [submitting, setSubmitting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
+
+  const [photoTarget, setPhotoTarget] = useState(null);
+  const [photoFile, setPhotoFile] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState(null);
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [photoProgress, setPhotoProgress] = useState(0);
+  const [photoRemoving, setPhotoRemoving] = useState(false);
+  const photoInputRef = useRef(null);
 
   const openCreate = () => {
     setEditing(null);
@@ -123,6 +173,69 @@ export default function AdminStudents() {
       refetch();
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Could not delete this student.");
+    }
+  };
+
+  const openPhotoDialog = (student) => {
+    setPhotoTarget(student);
+    setPhotoFile(null);
+    setPhotoPreview(null);
+    setPhotoProgress(0);
+  };
+
+  const closePhotoDialog = () => {
+    setPhotoTarget(null);
+    setPhotoFile(null);
+    setPhotoPreview(null);
+    setPhotoProgress(0);
+    if (photoInputRef.current) photoInputRef.current.value = "";
+  };
+
+  const onPhotoSelected = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const err = validatePhotoFile(file);
+    if (err) {
+      toast.error(err);
+      e.target.value = "";
+      return;
+    }
+    setPhotoFile(file);
+    setPhotoPreview(URL.createObjectURL(file));
+  };
+
+  const uploadPhoto = async () => {
+    if (!photoTarget || !photoFile) return toast.error("Choose a photo first");
+
+    const formData = new FormData();
+    formData.append("file", photoFile);
+
+    setPhotoUploading(true);
+    setPhotoProgress(0);
+    try {
+      await uploadWithProgress(`/api/students/${photoTarget.id}/profile-image`, formData, setPhotoProgress);
+      toast.success("Profile photo uploaded");
+      closePhotoDialog();
+      refetch();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Photo upload failed.");
+    } finally {
+      setPhotoUploading(false);
+    }
+  };
+
+  const removePhoto = async () => {
+    if (!photoTarget) return;
+    setPhotoRemoving(true);
+    try {
+      await api.delete(`/api/students/${photoTarget.id}/profile-image`);
+      toast.success("Profile photo removed");
+      closePhotoDialog();
+      refetch();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Couldn't remove the photo.");
+    } finally {
+      setPhotoRemoving(false);
     }
   };
 
@@ -192,6 +305,7 @@ export default function AdminStudents() {
               <Table data-testid="students-table">
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Photo</TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead>Admission No</TableHead>
                     <TableHead>Class</TableHead>
@@ -203,6 +317,18 @@ export default function AdminStudents() {
                 <TableBody>
                   {items.map((s) => (
                     <TableRow key={s.id} data-testid={`student-row-${s.id}`}>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <StudentPhotoThumb student={s} />
+                          {s.has_face_embedding ? (
+                            <Badge className="bg-lime text-ink border-0 text-[10px]">AI ready</Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-[10px] border-soft">
+                              No photo
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
                       <TableCell>
                         <div className="font-medium">{s.full_name}</div>
                         <div className="text-xs text-muted-foreground">{s.email}</div>
@@ -220,6 +346,14 @@ export default function AdminStudents() {
                         <StatusBadge status={s.status} />
                       </TableCell>
                       <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          data-testid={`photo-student-${s.id}`}
+                          onClick={() => openPhotoDialog(s)}
+                        >
+                          <Camera className="w-4 h-4" />
+                        </Button>
                         <Button variant="ghost" size="icon" data-testid={`edit-student-${s.id}`} onClick={() => openEdit(s)}>
                           <Pencil className="w-4 h-4" />
                         </Button>
@@ -353,6 +487,75 @@ export default function AdminStudents() {
         description={deleteTarget ? `${deleteTarget.full_name}'s account and records will be permanently removed. This can't be undone.` : ""}
         onConfirm={handleDelete}
       />
+
+      <Dialog open={!!photoTarget} onOpenChange={(open) => !open && closePhotoDialog()}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Student profile photo</DialogTitle>
+          </DialogHeader>
+          {photoTarget && (
+            <div className="space-y-4" data-testid="student-photo-dialog">
+              <div className="p-3 rounded-lg bg-surface-2 text-sm">
+                <div className="font-medium">{photoTarget.full_name}</div>
+                <div className="text-xs text-muted-foreground">{photoTarget.email}</div>
+              </div>
+
+              <label className="block cursor-pointer border-2 border-dashed border-soft rounded-2xl p-8 text-center hover:border-coral transition-colors bg-canvas">
+                <input
+                  ref={photoInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/jpg"
+                  className="hidden"
+                  data-testid="student-photo-input"
+                  onChange={onPhotoSelected}
+                />
+                {photoPreview ? (
+                  <img src={photoPreview} alt="Preview" className="mx-auto max-h-48 rounded-xl object-contain" />
+                ) : (
+                  <>
+                    <UploadCloud className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
+                    <div className="text-sm font-medium">Click to choose a photo</div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      JPG or PNG with exactly one clear face. Used for AI attendance matching.
+                    </div>
+                  </>
+                )}
+              </label>
+
+              <DialogFooter className="gap-2 sm:justify-between">
+                <div>
+                  {photoTarget.profile_image && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="border-coral text-coral"
+                      data-testid="remove-photo-btn"
+                      disabled={photoRemoving || photoUploading}
+                      onClick={removePhoto}
+                    >
+                      {photoRemoving ? "Removing…" : "Remove photo"}
+                    </Button>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <Button type="button" variant="outline" onClick={closePhotoDialog}>
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    className="bg-coral hover:bg-coral-deep text-ink"
+                    data-testid="upload-photo-btn"
+                    disabled={!photoFile || photoUploading}
+                    onClick={uploadPhoto}
+                  >
+                    {photoUploading ? `Uploading… ${photoProgress}%` : "Upload photo"}
+                  </Button>
+                </div>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }
