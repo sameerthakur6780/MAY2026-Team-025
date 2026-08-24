@@ -38,10 +38,11 @@ def _upload(authed, school_class, subject, rtype, filename="doc.pdf", content=b"
     )
 
 
-def _create_test_with_resources(admin, school_class, subject, teacher_row=None):
-    qp = _upload(admin, school_class, subject, "question_paper", "paper.pdf").get_json()
-    ak = _upload(admin, school_class, subject, "answer_key", "key.pdf").get_json()
-    resp = admin.post(
+def _create_test_with_resources(app, school_class, subject, teacher_row=None):
+    uploader = login_as(app.test_client(), (teacher_row or create_teacher()).user.email)
+    qp = _upload(uploader, school_class, subject, "question_paper", "paper.pdf").get_json()
+    ak = _upload(uploader, school_class, subject, "answer_key", "key.pdf").get_json()
+    resp = uploader.post(
         "/api/tests",
         json={
             "class_id": school_class.id,
@@ -111,10 +112,12 @@ def grading_patches(fake_storage, monkeypatch):
     return fake_storage
 
 
-def test_schedule_evaluation_requires_answer_key(admin):
+def test_schedule_evaluation_requires_answer_key(teacher):
+    authed, teacher_row = teacher
     school_class = create_class(5)
     subject = create_subject("Science")
-    resp = admin.post(
+    create_assignment(school_class.id, subject.id, teacher_row.id)
+    resp = authed.post(
         "/api/tests",
         json={
             "class_id": school_class.id,
@@ -126,18 +129,45 @@ def test_schedule_evaluation_requires_answer_key(admin):
     )
     test_id = resp.get_json()["id"]
     scheduled_at = (datetime.now(timezone.utc) + timedelta(days=1)).isoformat()
-    bad = admin.post(f"/api/tests/{test_id}/evaluation", json={"scheduled_at": scheduled_at})
+    bad = authed.post(f"/api/tests/{test_id}/evaluation", json={"scheduled_at": scheduled_at})
     assert bad.status_code == 400
     assert bad.get_json()["error"] == "missing_answer_key"
 
 
-def test_run_evaluation_grades_submission_and_missing_student(app, admin, grading_patches):
+def test_admin_cannot_create_schedule_or_run_tests(app, admin):
+    school_class = create_class(10)
+    subject = create_subject(f"Geography-{next_id()}")
+    test_data, _, _ = _create_test_with_resources(app, school_class, subject)
+
+    create_resp = admin.post(
+        "/api/tests",
+        json={
+            "class_id": school_class.id,
+            "subject_id": subject.id,
+            "title": "Admin-created test",
+            "due_date": "2026-09-01",
+            "max_marks": 10,
+        },
+    )
+    assert create_resp.status_code == 403
+
+    scheduled_at = (datetime.now(timezone.utc) + timedelta(days=1)).isoformat()
+    schedule_resp = admin.post(f"/api/tests/{test_data['id']}/evaluation", json={"scheduled_at": scheduled_at})
+    assert schedule_resp.status_code == 403
+
+    run_resp = admin.post(f"/api/tests/{test_data['id']}/evaluation/run")
+    assert run_resp.status_code == 403
+
+    assert admin.get(f"/api/tests/{test_data['id']}").status_code == 200
+
+
+def test_run_evaluation_grades_submission_and_missing_student(app, grading_patches):
     school_class = create_class(6)
     subject = create_subject(f"Maths-{next_id()}")
     teacher_row = create_teacher()
     create_assignment(school_class.id, subject.id, teacher_row.id)
 
-    test_data, qp, ak = _create_test_with_resources(admin, school_class, subject)
+    test_data, qp, ak = _create_test_with_resources(app, school_class, subject, teacher_row=teacher_row)
     student_with = create_student(class_id=school_class.id, admission_no=f"ADM{next_id()}")
     create_student(class_id=school_class.id, admission_no=f"ADM{next_id()}")
 
@@ -174,10 +204,10 @@ def test_run_evaluation_grades_submission_and_missing_student(app, admin, gradin
         assert sum(s.awarded_marks for s in scores) == 9
 
 
-def test_question_scores_endpoint(app, admin, grading_patches):
+def test_question_scores_endpoint(app, grading_patches):
     school_class = create_class(7)
     subject = create_subject(f"Physics-{next_id()}")
-    test_data, _, _ = _create_test_with_resources(admin, school_class, subject)
+    test_data, _, _ = _create_test_with_resources(app, school_class, subject)
     student_row = create_student(class_id=school_class.id)
 
     student_authed = login_as(app.test_client(), student_row.user.email)
@@ -198,12 +228,12 @@ def test_question_scores_endpoint(app, admin, grading_patches):
     assert body["scores"][0]["question_no"] == 1
 
 
-def test_answer_key_hidden_until_evaluation_completed(app, admin, grading_patches):
+def test_answer_key_hidden_until_evaluation_completed(app, grading_patches):
     school_class = create_class(8)
     subject = create_subject(f"Chemistry-{next_id()}")
     parent_row = create_parent()
     student_row = create_student(class_id=school_class.id, parent_id=parent_row.id)
-    test_data, _, ak = _create_test_with_resources(admin, school_class, subject)
+    test_data, _, ak = _create_test_with_resources(app, school_class, subject)
 
     student_authed = login_as(app.test_client(), student_row.user.email)
     parent_authed = login_as(app.test_client(), parent_row.user.email)
@@ -224,12 +254,12 @@ def test_answer_key_hidden_until_evaluation_completed(app, admin, grading_patche
     assert parent_visible.status_code == 200
 
 
-def test_manual_grade_overrides_ai_marks(app, admin, grading_patches):
+def test_manual_grade_overrides_ai_marks(app, grading_patches):
     school_class = create_class(9)
     subject = create_subject(f"Biology-{next_id()}")
     teacher_row = create_teacher()
     create_assignment(school_class.id, subject.id, teacher_row.id)
-    test_data, _, _ = _create_test_with_resources(admin, school_class, subject)
+    test_data, _, _ = _create_test_with_resources(app, school_class, subject, teacher_row=teacher_row)
     student_row = create_student(class_id=school_class.id)
 
     student_authed = login_as(app.test_client(), student_row.user.email)

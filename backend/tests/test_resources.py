@@ -45,19 +45,21 @@ def test_upload_requires_authentication(client):
     assert resp.status_code == 401
 
 
-def test_upload_forbidden_for_parent_and_student(parent, student):
+def test_upload_forbidden_for_admin_parent_and_student(admin, parent, student):
     school_class = create_class(1)
     subject = create_subject("Maths")
     parent_authed, _ = parent
     student_authed, _ = student
+    assert _upload(admin, school_class, subject).status_code == 403
     assert _upload(parent_authed, school_class, subject).status_code == 403
     assert _upload(student_authed, school_class, subject).status_code == 403
 
 
-def test_upload_success_by_admin(admin):
+def test_upload_success_by_teacher(teacher):
+    authed, _ = teacher
     school_class = create_class(1)
     subject = create_subject("Maths")
-    resp = _upload(admin, school_class, subject)
+    resp = _upload(authed, school_class, subject)
     assert resp.status_code == 201
     body = resp.get_json()
     assert body["type"] == "note"
@@ -67,18 +69,11 @@ def test_upload_success_by_admin(admin):
     assert body["size"] == len(b"%PDF-1.4 fake pdf content")
 
 
-def test_upload_success_by_teacher(teacher):
+def test_upload_missing_file_is_error(teacher):
     authed, _ = teacher
     school_class = create_class(1)
     subject = create_subject("Maths")
-    resp = _upload(authed, school_class, subject)
-    assert resp.status_code == 201
-
-
-def test_upload_missing_file_is_error(admin):
-    school_class = create_class(1)
-    subject = create_subject("Maths")
-    resp = admin.post(
+    resp = authed.post(
         "/api/resources",
         data={"type": "note", "subject_id": str(subject.id), "class_id": str(school_class.id)},
         content_type="multipart/form-data",
@@ -87,24 +82,27 @@ def test_upload_missing_file_is_error(admin):
     assert resp.get_json()["error"] == "missing_file"
 
 
-def test_upload_invalid_file_type_rejected(admin):
+def test_upload_invalid_file_type_rejected(teacher):
+    authed, _ = teacher
     school_class = create_class(1)
     subject = create_subject("Maths")
-    resp = _upload(admin, school_class, subject, filename="virus.exe")
+    resp = _upload(authed, school_class, subject, filename="virus.exe")
     assert resp.status_code == 400
     assert resp.get_json()["error"] == "invalid_file_type"
 
 
-def test_upload_empty_file_rejected(admin):
+def test_upload_empty_file_rejected(teacher):
+    authed, _ = teacher
     school_class = create_class(1)
     subject = create_subject("Maths")
-    resp = _upload(admin, school_class, subject, content=b"")
+    resp = _upload(authed, school_class, subject, content=b"")
     assert resp.status_code == 400
     assert resp.get_json()["error"] == "empty_file"
 
 
-def test_upload_missing_form_fields_validation_error(admin):
-    resp = admin.post(
+def test_upload_missing_form_fields_validation_error(teacher):
+    authed, _ = teacher
+    resp = authed.post(
         "/api/resources",
         data={"file": (io.BytesIO(b"x"), "a.pdf")},
         content_type="multipart/form-data",
@@ -113,40 +111,44 @@ def test_upload_missing_form_fields_validation_error(admin):
     assert resp.get_json()["error"] == "validation_error"
 
 
-def test_upload_invalid_type_enum_validation_error(admin):
+def test_upload_invalid_type_enum_validation_error(teacher):
+    authed, _ = teacher
     school_class = create_class(1)
     subject = create_subject("Maths")
-    resp = _upload(admin, school_class, subject, rtype="not_a_real_type")
+    resp = _upload(authed, school_class, subject, rtype="not_a_real_type")
     assert resp.status_code == 400
     assert resp.get_json()["error"] == "validation_error"
 
 
-def test_upload_nonexistent_class_not_found(admin):
+def test_upload_nonexistent_class_not_found(teacher):
+    authed, _ = teacher
     subject = create_subject("Maths")
 
     class FakeClass:
         id = 999999
 
-    resp = _upload(admin, FakeClass(), subject)
+    resp = _upload(authed, FakeClass(), subject)
     assert resp.status_code == 404
 
 
-def test_upload_nonexistent_subject_not_found(admin):
+def test_upload_nonexistent_subject_not_found(teacher):
+    authed, _ = teacher
     school_class = create_class(1)
 
     class FakeSubject:
         id = 999999
 
-    resp = _upload(admin, school_class, FakeSubject())
+    resp = _upload(authed, school_class, FakeSubject())
     assert resp.status_code == 404
 
 
 # ---------------------------------------------------------------------------
-# Admin PDF upload -> automatic RAG ingestion + success email
+# Teacher PDF upload -> automatic RAG ingestion + success email
 # ---------------------------------------------------------------------------
 
 
-def test_admin_pdf_upload_triggers_ingestion_and_success_email(admin, monkeypatch):
+def test_teacher_pdf_upload_triggers_ingestion_and_success_email(teacher, monkeypatch):
+    authed, _ = teacher
     from app.extensions import mail
     from app.services import assistant_service
     from rag.schemas import IngestResult
@@ -162,7 +164,7 @@ def test_admin_pdf_upload_triggers_ingestion_and_success_email(admin, monkeypatc
     school_class = create_class(1)
     subject = create_subject("Physics")
     with mail.record_messages() as outbox:
-        resp = _upload(admin, school_class, subject, filename="physics.pdf", rtype="pdf")
+        resp = _upload(authed, school_class, subject, filename="physics.pdf", rtype="pdf")
 
     assert resp.status_code == 201
     assert len(outbox) == 1
@@ -172,7 +174,8 @@ def test_admin_pdf_upload_triggers_ingestion_and_success_email(admin, monkeypatc
     assert "5 chunk" in sent.body
 
 
-def test_admin_pdf_upload_skipped_ingestion_still_emails(admin, monkeypatch):
+def test_teacher_pdf_upload_skipped_ingestion_still_emails(teacher, monkeypatch):
+    authed, _ = teacher
     from app.extensions import mail
     from app.services import assistant_service
     from rag.schemas import IngestResult
@@ -188,14 +191,15 @@ def test_admin_pdf_upload_skipped_ingestion_still_emails(admin, monkeypatch):
     school_class = create_class(1)
     subject = create_subject("Physics")
     with mail.record_messages() as outbox:
-        resp = _upload(admin, school_class, subject, filename="physics.pdf", rtype="pdf")
+        resp = _upload(authed, school_class, subject, filename="physics.pdf", rtype="pdf")
 
     assert resp.status_code == 201
     assert len(outbox) == 1
     assert "already up to date" in outbox[0].body
 
 
-def test_admin_pdf_ingestion_failure_does_not_send_email(admin, monkeypatch):
+def test_teacher_pdf_ingestion_failure_does_not_send_email(teacher, monkeypatch):
+    authed, _ = teacher
     from app.extensions import mail
     from app.services import assistant_service
 
@@ -207,28 +211,14 @@ def test_admin_pdf_ingestion_failure_does_not_send_email(admin, monkeypatch):
     school_class = create_class(1)
     subject = create_subject("Physics")
     with mail.record_messages() as outbox:
-        resp = _upload(admin, school_class, subject, filename="physics.pdf", rtype="pdf")
+        resp = _upload(authed, school_class, subject, filename="physics.pdf", rtype="pdf")
 
     assert resp.status_code == 201  # upload itself still succeeds
     assert outbox == []
 
 
-def test_teacher_pdf_upload_does_not_trigger_ingestion(teacher, monkeypatch):
-    from app.services import assistant_service
-
-    def fail_if_called(resource_id, force=False):
-        raise AssertionError("teacher uploads must not auto-trigger ingestion")
-
-    monkeypatch.setattr(assistant_service, "ingest_resource_pdf", fail_if_called)
-
+def test_teacher_non_pdf_upload_does_not_trigger_ingestion(teacher, monkeypatch):
     authed, _ = teacher
-    school_class = create_class(1)
-    subject = create_subject("Physics")
-    resp = _upload(authed, school_class, subject, filename="physics.pdf", rtype="pdf")
-    assert resp.status_code == 201
-
-
-def test_admin_non_pdf_upload_does_not_trigger_ingestion(admin, monkeypatch):
     from app.services import assistant_service
 
     def fail_if_called(resource_id, force=False):
@@ -238,7 +228,7 @@ def test_admin_non_pdf_upload_does_not_trigger_ingestion(admin, monkeypatch):
 
     school_class = create_class(1)
     subject = create_subject("Physics")
-    resp = _upload(admin, school_class, subject, filename="notes.pdf", rtype="note")
+    resp = _upload(authed, school_class, subject, filename="notes.pdf", rtype="note")
     assert resp.status_code == 201
 
 
@@ -251,26 +241,25 @@ def test_list_resources_requires_authentication(client):
     assert client.get("/api/resources").status_code == 401
 
 
-def test_admin_sees_all_resources(admin):
+def test_admin_sees_all_resources(admin, teacher):
+    teacher_authed, _ = teacher
     class_a = create_class(1)
     class_b = create_class(2)
     subject = create_subject("Maths")
-    _upload(admin, class_a, subject)
-    _upload(admin, class_b, subject)
+    _upload(teacher_authed, class_a, subject)
+    _upload(teacher_authed, class_b, subject)
     resp = admin.get("/api/resources")
     assert resp.status_code == 200
     assert resp.get_json()["total"] == 2
 
 
 def test_student_sees_only_own_class_resources(make_client):
-    from conftest import create_admin_user
-
     class_a = create_class(1)
     class_b = create_class(2)
     subject = create_subject("Maths")
-    admin_authed = login_as(make_client(), create_admin_user().email)
-    _upload(admin_authed, class_a, subject, filename="visible.pdf")
-    _upload(admin_authed, class_b, subject, filename="hidden.pdf")
+    uploader_authed = login_as(make_client(), create_teacher().user.email)
+    _upload(uploader_authed, class_a, subject, filename="visible.pdf")
+    _upload(uploader_authed, class_b, subject, filename="hidden.pdf")
 
     student_row = create_student(class_id=class_a.id)
     student_authed = login_as(make_client(), student_row.user.email)
@@ -281,15 +270,12 @@ def test_student_sees_only_own_class_resources(make_client):
 
 
 def test_parent_sees_only_childs_class_resources(make_client):
-    from conftest import create_admin_user
-
     class_a = create_class(1)
     class_b = create_class(2)
     subject = create_subject("Maths")
-    admin_user = create_admin_user()
-    admin_authed = login_as(make_client(), admin_user.email)
-    _upload(admin_authed, class_a, subject, filename="visible.pdf")
-    _upload(admin_authed, class_b, subject, filename="hidden.pdf")
+    uploader_authed = login_as(make_client(), create_teacher().user.email)
+    _upload(uploader_authed, class_a, subject, filename="visible.pdf")
+    _upload(uploader_authed, class_b, subject, filename="hidden.pdf")
 
     parent_row = create_parent()
     create_student(class_id=class_a.id, parent_id=parent_row.id)
@@ -301,15 +287,12 @@ def test_parent_sees_only_childs_class_resources(make_client):
 
 
 def test_teacher_sees_only_assigned_class_resources(make_client):
-    from conftest import create_admin_user
-
     class_a = create_class(1)
     class_b = create_class(2)
     subject = create_subject("Maths")
-    admin_user = create_admin_user()
-    admin_authed = login_as(make_client(), admin_user.email)
-    _upload(admin_authed, class_a, subject, filename="visible.pdf")
-    _upload(admin_authed, class_b, subject, filename="hidden.pdf")
+    uploader_authed = login_as(make_client(), create_teacher().user.email)
+    _upload(uploader_authed, class_a, subject, filename="visible.pdf")
+    _upload(uploader_authed, class_b, subject, filename="hidden.pdf")
 
     teacher_row = create_teacher()
     create_assignment(class_a.id, subject.id, teacher_row.id)
@@ -329,10 +312,9 @@ def test_get_resource_forbidden_for_unrelated_student(make_client):
     class_a = create_class(1)
     class_b = create_class(2)
     subject = create_subject("Maths")
-    from conftest import create_admin_user
 
-    admin_authed = login_as(make_client(), create_admin_user().email)
-    resource_id = _upload(admin_authed, class_a, subject).get_json()["id"]
+    uploader_authed = login_as(make_client(), create_teacher().user.email)
+    resource_id = _upload(uploader_authed, class_a, subject).get_json()["id"]
 
     student_row = create_student(class_id=class_b.id)
     student_authed = login_as(make_client(), student_row.user.email)
@@ -340,10 +322,11 @@ def test_get_resource_forbidden_for_unrelated_student(make_client):
     assert resp.status_code == 403
 
 
-def test_download_returns_signed_url(admin):
+def test_download_returns_signed_url(admin, teacher):
+    teacher_authed, _ = teacher
     school_class = create_class(1)
     subject = create_subject("Maths")
-    resource_id = _upload(admin, school_class, subject, filename="dl.pdf").get_json()["id"]
+    resource_id = _upload(teacher_authed, school_class, subject, filename="dl.pdf").get_json()["id"]
 
     resp = admin.get(f"/api/resources/{resource_id}/download")
     assert resp.status_code == 200
@@ -359,12 +342,10 @@ def test_download_not_found(admin):
 
 
 def test_download_forbidden_for_unrelated_teacher(make_client):
-    from conftest import create_admin_user
-
     class_a = create_class(1)
     subject = create_subject("Maths")
-    admin_authed = login_as(make_client(), create_admin_user().email)
-    resource_id = _upload(admin_authed, class_a, subject).get_json()["id"]
+    uploader_authed = login_as(make_client(), create_teacher().user.email)
+    resource_id = _upload(uploader_authed, class_a, subject).get_json()["id"]
 
     other_teacher = create_teacher()  # not assigned to class_a
     teacher_authed = login_as(make_client(), other_teacher.user.email)
@@ -386,10 +367,11 @@ def test_delete_resource_forbidden_for_parent_and_student(parent, student):
     assert student_authed.delete("/api/resources/1").status_code == 403
 
 
-def test_delete_resource_by_admin_success(admin):
+def test_delete_resource_by_admin_success(admin, teacher):
+    teacher_authed, _ = teacher
     school_class = create_class(1)
     subject = create_subject("Maths")
-    resource_id = _upload(admin, school_class, subject).get_json()["id"]
+    resource_id = _upload(teacher_authed, school_class, subject).get_json()["id"]
     resp = admin.delete(f"/api/resources/{resource_id}")
     assert resp.status_code == 204
     assert admin.get(f"/api/resources/{resource_id}").status_code == 404
@@ -424,10 +406,11 @@ def test_delete_resource_not_found(admin):
     assert resp.status_code == 404
 
 
-def test_delete_resource_referenced_by_homework_is_conflict(admin, app):
+def test_delete_resource_referenced_by_homework_is_conflict(admin, teacher, app):
+    teacher_authed, _ = teacher
     school_class = create_class(1)
     subject = create_subject("Maths")
-    resource_id = _upload(admin, school_class, subject).get_json()["id"]
+    resource_id = _upload(teacher_authed, school_class, subject).get_json()["id"]
 
     with app.app_context():
         homework = Homework(
