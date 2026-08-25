@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Upload, BookOpen, CheckCircle2, Clock } from "lucide-react";
 import { toast } from "sonner";
 
@@ -160,6 +160,9 @@ export default function StudentHomework() {
                         <div className="text-xs text-muted-foreground mt-0.5">
                           {h.subject_name} &middot; Due {h.due_date}
                         </div>
+                        {h.description && (
+                          <div className="text-xs text-muted-foreground mt-1 line-clamp-2 whitespace-pre-wrap">{h.description}</div>
+                        )}
                         {submission && (
                           <div className="text-xs text-lime mt-1 inline-flex items-center gap-1">
                             <CheckCircle2 className="w-3 h-3" /> Submitted {new Date(submission.submitted_at).toLocaleDateString()}
@@ -192,6 +195,9 @@ export default function StudentHomework() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="font-display">Submit: {dialogHw?.title}</DialogTitle>
+            {dialogHw?.description && (
+              <DialogDescription className="whitespace-pre-wrap text-left">{dialogHw.description}</DialogDescription>
+            )}
           </DialogHeader>
           <label className="block cursor-pointer border-2 border-dashed border-soft rounded-xl p-8 text-center hover:border-coral bg-canvas mt-2">
             <input

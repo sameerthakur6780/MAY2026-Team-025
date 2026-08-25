@@ -11,6 +11,7 @@ from app.services.teacher_service import (
     delete_teacher,
     get_teacher_or_404,
     serialize_teacher,
+    update_teacher,
 )
 from app.utils.decorators import role_required
 from app.utils.pagination import paginate_query
@@ -60,11 +61,11 @@ def create_teacher_route():
 def update_teacher_route(teacher_id):
     raw = request.get_json(silent=True) or {}
     try:
-        _update_schema.load(raw)
+        data = _update_schema.load(raw, partial=True)
     except ValidationError as exc:
         return jsonify({"error": "validation_error", "message": exc.messages}), 400
 
-    teacher = get_teacher_or_404(teacher_id)
+    teacher = update_teacher(teacher_id, data)
     return jsonify(serialize_teacher(teacher)), 200
 
 

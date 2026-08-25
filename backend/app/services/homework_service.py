@@ -9,6 +9,7 @@ from app.models.homework import Homework
 from app.models.resource import Resource
 from app.models.student import Student
 from app.services.notification_service import NotificationService
+from app.services.storage import get_storage_service
 from app.utils.errors import ApiError, forbidden, not_found
 from app.utils.scoping import current_parent, current_student, current_teacher, teacher_class_ids
 
@@ -157,3 +158,20 @@ def get_homework_scoped(homework_id, role):
             raise forbidden()
         return homework
     raise forbidden()
+
+
+def delete_homework(homework_id, current_user_id, role):
+    homework = get_homework_or_404(homework_id)
+    if role != "admin" and homework.created_by != current_user_id:
+        raise forbidden("Only the creator or an admin can delete this homework")
+
+    submissions = list(homework.submissions)
+    storage = get_storage_service()
+    for submission in submissions:
+        try:
+            storage.delete(submission.file_url)
+        except Exception:
+            logger.exception("Failed to delete submission file %s", submission.file_url)
+
+    db.session.delete(homework)
+    db.session.commit()

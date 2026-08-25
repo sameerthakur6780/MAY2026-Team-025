@@ -5,6 +5,7 @@ from marshmallow import ValidationError
 from app.schemas.homework_schema import HomeworkCreateSchema, HomeworkUpdateSchema
 from app.services.homework_service import (
     create_homework,
+    delete_homework,
     get_homework_scoped,
     list_homework_query,
     serialize_homework,
@@ -80,6 +81,14 @@ def update_homework_route(homework_id):
 
     homework = update_homework(homework_id, data)
     return jsonify(serialize_homework(homework)), 200
+
+
+@homework_bp.delete("/<int:homework_id>")
+@role_required("admin", "teacher")
+def delete_homework_route(homework_id):
+    role = get_jwt()["role"]
+    delete_homework(homework_id, current_user.id, role)
+    return "", 204
 
 
 @homework_bp.post("/<int:homework_id>/submissions")

@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import EmptyState from "@/components/EmptyState";
+import ConfirmDialog from "@/components/ConfirmDialog";
+import { useAuth } from "@/context/AuthContext";
 import { TEACHER_NAV } from "@/lib/navConfig";
 import { api, ApiError } from "@/lib/apiClient";
 import { Card, CardContent } from "@/components/ui/card";
@@ -12,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, BookOpen, Users } from "lucide-react";
+import { Plus, BookOpen, Users, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 function emptyForm() {
@@ -20,6 +22,7 @@ function emptyForm() {
 }
 
 export default function TeacherHomework() {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [homework, setHomework] = useState([]);
   const [classes, setClasses] = useState([]);
@@ -29,6 +32,7 @@ export default function TeacherHomework() {
   const [dialog, setDialog] = useState(false);
   const [form, setForm] = useState(emptyForm());
   const [submitting, setSubmitting] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   const loadAll = () => {
     setLoading(true);
@@ -80,6 +84,16 @@ export default function TeacherHomework() {
       toast.error(err instanceof ApiError ? err.message : "Could not assign homework.");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    try {
+      await api.delete(`/api/homework/${deleteTarget.id}`);
+      toast.success("Homework deleted");
+      loadAll();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Could not delete this homework.");
     }
   };
 
@@ -165,8 +179,15 @@ export default function TeacherHomework() {
                       <div className="font-display text-lg font-semibold text-foreground mt-1">{h.title}</div>
                       <div className="text-xs text-yellow mt-1 font-semibold">Due {h.due_date}</div>
                     </div>
-                    <div className="text-xs text-coral inline-flex items-center gap-1.5 shrink-0">
-                      <Users className="w-3.5 h-3.5" /> {assigned}
+                    <div className="flex items-start gap-2 shrink-0">
+                      <div className="text-xs text-coral inline-flex items-center gap-1.5">
+                        <Users className="w-3.5 h-3.5" /> {assigned}
+                      </div>
+                      {(user?.role === "admin" || h.created_by === user?.id) && (
+                        <Button variant="ghost" size="icon" data-testid={`delete-hw-${h.id}`} onClick={() => setDeleteTarget(h)}>
+                          <Trash2 className="w-4 h-4 text-coral" />
+                        </Button>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
@@ -180,6 +201,14 @@ export default function TeacherHomework() {
           })}
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="Delete this homework?"
+        description={deleteTarget ? `"${deleteTarget.title}" and any student submissions will be permanently removed.` : ""}
+        onConfirm={handleDelete}
+      />
     </DashboardLayout>
   );
 }
