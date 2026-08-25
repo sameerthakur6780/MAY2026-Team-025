@@ -354,3 +354,62 @@ def test_upstash_rest_cache_backend(monkeypatch):
     assert cached is not None
     assert cached.answer == answer.answer
     assert redis_cache.cache_stats() == {"backend": "upstash-rest", "entries": 1}
+
+
+def test_get_book_by_resource_id_returns_normalized_book(monkeypatch):
+    class FakeVector:
+        metadata = {
+            "book_id": "book-123",
+            "pdf_hash": "abc123",
+            "title": "Physics Notes",
+            "subject": "Physics",
+            "grade": 9,
+            "resource_id": 42,
+            "chunk_count": 7,
+        }
+
+    class FakeDenseIndex:
+        def fetch_by_metadata(self, *, filter, namespace, limit):
+            assert filter == {"resource_id": {"$eq": 42}}
+            assert namespace == pinecone_store.NS_BOOKS
+            return type("Fetched", (), {"vectors": {"book#abc123": FakeVector()}})()
+
+    monkeypatch.setattr(pinecone_store, "_dense_index", lambda: FakeDenseIndex())
+
+    book = pinecone_store.get_book_by_resource_id(42)
+    assert book == {
+        "id": "book-123",
+        "pdf_hash": "abc123",
+        "title": "Physics Notes",
+        "subject": "Physics",
+        "grade": 9,
+        "resource_id": 42,
+        "chunk_count": 7,
+    }
+
+
+def test_get_book_by_resource_id_returns_none_when_missing(monkeypatch):
+    class FakeDenseIndex:
+        def fetch_by_metadata(self, *, filter, namespace, limit):
+            return type("Fetched", (), {"vectors": {}})()
+
+    monkeypatch.setattr(pinecone_store, "_dense_index", lambda: FakeDenseIndex())
+    assert pinecone_store.get_book_by_resource_id(999) is None
+
+
+def test_delete_book_removes_chunks_and_book_record(monkeypatch):
+    deleted: list[tuple] = []
+
+    def fake_delete_ids(*, index, namespace, ids):
+        deleted.append((namespace, ids))
+
+    monkeypatch.setattr(pinecone_store, "_list_ids", lambda **_kwargs: ["book-123#chunk#0"])
+    monkeypatch.setattr(pinecone_store, "_delete_ids", fake_delete_ids)
+    monkeypatch.setattr(pinecone_store, "_dense_index", lambda: object())
+    monkeypatch.setattr(pinecone_store, "_sparse_index", lambda: object())
+
+    pinecone_store.delete_book("book-123", "abc123")
+
+    assert (pinecone_store.NS_CHUNKS, ["book-123#chunk#0"]) in deleted
+    assert (pinecone_store.NS_PARENTS, ["book-123#chunk#0"]) in deleted
+    assert (pinecone_store.NS_BOOKS, ["book#abc123"]) in deleted

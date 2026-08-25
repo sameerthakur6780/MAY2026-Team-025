@@ -8,8 +8,10 @@ from rag.extraction.pdf_extractor import extract_pdf
 from rag.schemas import IngestResult
 from rag.store.pinecone_store import (
     create_book,
+    delete_book,
     delete_book_chunks,
     get_book_by_hash,
+    get_book_by_resource_id,
     index_chunks,
 )
 
@@ -86,3 +88,11 @@ def ingest_pdf_file(
         resource_id=resource_id,
         force=force,
     )
+
+
+def remove_resource_from_index(resource_id: int) -> bool:
+    book = get_book_by_resource_id(resource_id)
+    if book is None:
+        return False
+    delete_book(book["id"], book["pdf_hash"])
+    return True

@@ -231,13 +231,27 @@ def delete_resource(resource_id, current_user_id, role):
         raise forbidden("Only the uploader or an admin can delete this resource")
 
     homework_count = Homework.query.filter_by(resource_id=resource_id).count()
-    test_count = Test.query.filter_by(resource_id=resource_id).count()
+    test_count = Test.query.filter(
+        db.or_(
+            Test.resource_id == resource_id,
+            Test.question_paper_resource_id == resource_id,
+            Test.answer_key_resource_id == resource_id,
+        )
+    ).count()
     if homework_count or test_count:
         raise ApiError(
             f"Cannot delete: referenced by {homework_count} homework and {test_count} test record(s)",
             "conflict",
             409,
         )
+
+    if resource.type in (ResourceType.PDF, ResourceType.NOTE):
+        try:
+            from rag.pipeline.ingest import remove_resource_from_index
+
+            remove_resource_from_index(resource_id)
+        except Exception:
+            logger.exception("Failed to remove resource %s from RAG index", resource_id)
 
     get_storage_service().delete(resource.storage_path)
     db.session.delete(resource)

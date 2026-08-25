@@ -207,6 +207,18 @@ def ensure_indexes() -> None:
         )
 
 
+def _book_from_metadata(metadata: dict[str, Any], *, pdf_hash: str | None = None) -> dict[str, Any]:
+    return {
+        "id": metadata.get("book_id", ""),
+        "pdf_hash": metadata.get("pdf_hash", pdf_hash or ""),
+        "title": metadata.get("title", ""),
+        "subject": metadata.get("subject", ""),
+        "grade": metadata.get("grade", 0),
+        "resource_id": metadata.get("resource_id"),
+        "chunk_count": int(metadata.get("chunk_count") or 0),
+    }
+
+
 def get_book_by_hash(pdf_hash: str) -> dict[str, Any] | None:
     record_id = _book_record_id(pdf_hash)
     fetched = _dense_index().fetch(ids=[record_id], namespace=NS_BOOKS)
@@ -216,15 +228,22 @@ def get_book_by_hash(pdf_hash: str) -> dict[str, Any] | None:
         return None
 
     metadata = dict(getattr(vector, "metadata", None) or {})
-    return {
-        "id": metadata.get("book_id", ""),
-        "pdf_hash": metadata.get("pdf_hash", pdf_hash),
-        "title": metadata.get("title", ""),
-        "subject": metadata.get("subject", ""),
-        "grade": metadata.get("grade", 0),
-        "resource_id": metadata.get("resource_id"),
-        "chunk_count": int(metadata.get("chunk_count") or 0),
-    }
+    return _book_from_metadata(metadata, pdf_hash=pdf_hash)
+
+
+def get_book_by_resource_id(resource_id: int) -> dict[str, Any] | None:
+    fetched = _dense_index().fetch_by_metadata(
+        filter={"resource_id": {"$eq": resource_id}},
+        namespace=NS_BOOKS,
+        limit=1,
+    )
+    vectors = getattr(fetched, "vectors", None) or {}
+    if not vectors:
+        return None
+
+    vector = next(iter(vectors.values()))
+    metadata = dict(getattr(vector, "metadata", None) or {})
+    return _book_from_metadata(metadata)
 
 
 def create_book(
@@ -271,6 +290,15 @@ def delete_book_chunks(book_id: str) -> None:
     _delete_ids(index=dense, namespace=NS_CHUNKS, ids=dense_chunk_ids)
     _delete_ids(index=dense, namespace=NS_PARENTS, ids=dense_parent_ids)
     _delete_ids(index=sparse, namespace=NS_CHUNKS, ids=sparse_chunk_ids)
+
+
+def delete_book(book_id: str, pdf_hash: str) -> None:
+    delete_book_chunks(book_id)
+    _delete_ids(
+        index=_dense_index(),
+        namespace=NS_BOOKS,
+        ids=[_book_record_id(pdf_hash)],
+    )
 
 
 def index_chunks(chunks: list[ChunkRecord], embeddings: list[list[float]]) -> int:
