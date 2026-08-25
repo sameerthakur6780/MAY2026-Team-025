@@ -91,13 +91,6 @@ export const SAFETY_FEED = [
   { id: "N04", type: "fee", message: "Fee reminder — cycle Nov–Dec 2025 due Feb 28", time: "3 days ago", ok: false },
 ];
 
-export const CHAT_STARTERS = [
-  "What's my homework for tonight?",
-  "When is my next Physics test?",
-  "Explain Newton's 3rd law simply",
-  "Show tomorrow's timetable",
-];
-
 // Mock AI reply generator
 export function mockAssistantReply(msg) {
   const m = msg.toLowerCase();
