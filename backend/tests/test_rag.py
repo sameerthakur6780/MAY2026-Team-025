@@ -163,20 +163,14 @@ def test_generate_answer_falls_back_to_extractive_on_parse_failure(monkeypatch):
     assert result.model_used == "retrieval-only"
 
 
-def test_generate_answer_uses_llm_for_general_knowledge_when_no_hits(monkeypatch):
+def test_generate_answer_returns_not_found_when_no_hits_without_calling_llm(monkeypatch):
     cfg = type("Config", (), {"generation_enabled": True})()
     monkeypatch.setattr(answer_generator, "get_rag_config", lambda: cfg)
-    calls = []
 
-    def fake_completion(messages, **_kwargs):
-        calls.append(messages)
-        return (
-            '{"answer": "This isn\'t covered in your textbook, but here\'s a general explanation: '
-            'For every action there is an equal and opposite reaction.", "citations": []}',
-            "test-model",
-        )
+    def fail_if_called(*_args, **_kwargs):
+        raise AssertionError("LLM must not be called when retrieval returns no hits")
 
-    monkeypatch.setattr(answer_generator, "completion_with_fallback", fake_completion)
+    monkeypatch.setattr(answer_generator, "completion_with_fallback", fail_if_called)
 
     result = answer_generator.generate_answer(
         "What is Newton's third law?",
@@ -185,8 +179,45 @@ def test_generate_answer_uses_llm_for_general_knowledge_when_no_hits(monkeypatch
         subject="Physics",
     )
 
-    assert calls
-    assert result.answer.startswith("This isn't covered in your textbook")
+    assert "couldn't find relevant material" in result.answer.lower()
+    assert result.citations == []
+    assert result.model_used == "none"
+
+
+def test_generate_answer_passes_through_llm_grounded_refusal(monkeypatch):
+    cfg = type("Config", (), {"generation_enabled": True})()
+    monkeypatch.setattr(answer_generator, "get_rag_config", lambda: cfg)
+    refusal = (
+        "I couldn't find this in your textbook excerpts. Try rephrasing or specifying the chapter."
+    )
+    monkeypatch.setattr(
+        answer_generator,
+        "completion_with_fallback",
+        lambda *_args, **_kwargs: (
+            f'{{"answer": "{refusal}", "citations": []}}',
+            "test-model",
+        ),
+    )
+
+    context_blocks = [
+        {
+            "book_id": "book-1",
+            "chapter": "Thermodynamics",
+            "section": "Heat",
+            "page_range": "1-2",
+            "content_type": "explanation",
+            "content": "Heat flows from hot to cold objects.",
+            "parent_text": "Heat flows from hot to cold objects.",
+        }
+    ]
+    result = answer_generator.generate_answer(
+        "What is Newton's third law?",
+        context_blocks,
+        grade=9,
+        subject="Physics",
+    )
+
+    assert result.answer == refusal
     assert result.citations == []
     assert result.model_used == "test-model"
 
