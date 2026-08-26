@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { STUDENT_NAV } from "@/lib/navConfig";
-import { CHAT_STARTERS } from "@/lib/mockData";
 import { api, formatErrorMessage } from "@/lib/apiClient";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -84,17 +83,6 @@ export default function StudentAssistant() {
 
           {error && (
             <div className="px-6 pb-2 text-xs text-destructive">{error}</div>
-          )}
-
-          {messages.length <= 1 && (
-            <div className="px-6 pb-4 flex flex-wrap gap-2">
-              {CHAT_STARTERS.map((s, i) => (
-                <button key={i} data-testid={`starter-${i}`} onClick={() => send(s)}
-                  className="px-3 py-1.5 rounded-pill border border-soft text-xs font-medium text-muted-foreground hover:border-coral hover:text-coral transition-colors">
-                  {s}
-                </button>
-              ))}
-            </div>
           )}
 
           <form onSubmit={e => { e.preventDefault(); send(); }} className="flex items-center gap-3 p-5 border-t border-soft" data-testid="chat-form">

@@ -5,6 +5,7 @@ from datetime import date
 
 from app.extensions import db
 from app.models.homework import Homework
+from app.models.test import Test as TestModel
 from conftest import (
     create_assignment,
     create_class,
@@ -427,3 +428,116 @@ def test_delete_resource_referenced_by_homework_is_conflict(admin, teacher, app)
     resp = admin.delete(f"/api/resources/{resource_id}")
     assert resp.status_code == 409
     assert resp.get_json()["error"] == "conflict"
+
+
+def test_delete_resource_referenced_by_test_question_paper_is_conflict(admin, app):
+    school_class = create_class(1)
+    subject = create_subject("Maths")
+    resource_id = _upload(admin, school_class, subject, rtype="question_paper").get_json()["id"]
+
+    with app.app_context():
+        test_row = TestModel(
+            class_id=school_class.id,
+            subject_id=subject.id,
+            title="Unit Test 1",
+            due_date=date(2026, 1, 1),
+            created_by=1,
+            question_paper_resource_id=resource_id,
+        )
+        db.session.add(test_row)
+        db.session.commit()
+
+    resp = admin.delete(f"/api/resources/{resource_id}")
+    assert resp.status_code == 409
+    assert resp.get_json()["error"] == "conflict"
+
+
+def test_delete_resource_referenced_by_test_answer_key_is_conflict(admin, app):
+    school_class = create_class(1)
+    subject = create_subject("Maths")
+    resource_id = _upload(admin, school_class, subject, rtype="answer_key").get_json()["id"]
+
+    with app.app_context():
+        test_row = TestModel(
+            class_id=school_class.id,
+            subject_id=subject.id,
+            title="Unit Test 1",
+            due_date=date(2026, 1, 1),
+            created_by=1,
+            answer_key_resource_id=resource_id,
+        )
+        db.session.add(test_row)
+        db.session.commit()
+
+    resp = admin.delete(f"/api/resources/{resource_id}")
+    assert resp.status_code == 409
+    assert resp.get_json()["error"] == "conflict"
+
+
+def test_delete_pdf_resource_removes_from_rag_index(admin, monkeypatch):
+    import rag.pipeline.ingest as ingest_module
+
+    removed: list[int] = []
+
+    def fake_remove(resource_id):
+        removed.append(resource_id)
+        return True
+
+    monkeypatch.setattr(ingest_module, "remove_resource_from_index", fake_remove)
+
+    school_class = create_class(1)
+    subject = create_subject("Physics")
+    resource_id = _upload(admin, school_class, subject, rtype="pdf").get_json()["id"]
+    resp = admin.delete(f"/api/resources/{resource_id}")
+    assert resp.status_code == 204
+    assert removed == [resource_id]
+
+
+def test_delete_note_resource_removes_from_rag_index(admin, monkeypatch):
+    import rag.pipeline.ingest as ingest_module
+
+    removed: list[int] = []
+
+    def fake_remove(resource_id):
+        removed.append(resource_id)
+        return True
+
+    monkeypatch.setattr(ingest_module, "remove_resource_from_index", fake_remove)
+
+    school_class = create_class(1)
+    subject = create_subject("Physics")
+    resource_id = _upload(admin, school_class, subject, rtype="note").get_json()["id"]
+    resp = admin.delete(f"/api/resources/{resource_id}")
+    assert resp.status_code == 204
+    assert removed == [resource_id]
+
+
+def test_delete_question_paper_does_not_call_rag_cleanup(admin, monkeypatch):
+    import rag.pipeline.ingest as ingest_module
+
+    def fail_if_called(resource_id):
+        raise AssertionError("non-indexable resource types must not trigger RAG cleanup")
+
+    monkeypatch.setattr(ingest_module, "remove_resource_from_index", fail_if_called)
+
+    school_class = create_class(1)
+    subject = create_subject("Physics")
+    resource_id = _upload(admin, school_class, subject, rtype="question_paper").get_json()["id"]
+    resp = admin.delete(f"/api/resources/{resource_id}")
+    assert resp.status_code == 204
+
+
+def test_delete_resource_rag_cleanup_failure_still_deletes(admin, monkeypatch):
+    import rag.pipeline.ingest as ingest_module
+
+    def boom(resource_id):
+        raise RuntimeError("Pinecone unavailable")
+
+    monkeypatch.setattr(ingest_module, "remove_resource_from_index", boom)
+
+    school_class = create_class(1)
+    subject = create_subject("Physics")
+    resource_id = _upload(admin, school_class, subject, rtype="pdf").get_json()["id"]
+    resp = admin.delete(f"/api/resources/{resource_id}")
+    assert resp.status_code == 204
+    assert admin.get(f"/api/resources/{resource_id}").status_code == 404

@@ -28,21 +28,15 @@ REWRITE_SYSTEM = (
     'Respond with JSON only: {"search_query": "..."}'
 )
 ANSWER_SYSTEM = (
-    "You are a tuition-centre tutor helping a student. Prefer the provided textbook excerpts "
-    "when they contain relevant information. Cite them in the citations array when you use them. "
-    "If the excerpts are missing or do not contain enough information, answer from general "
-    "knowledge for the given grade and subject. When you answer without textbook support, "
-    "start with: \"This isn't covered in your textbook, but here's a general explanation:\" "
-    "and return an empty citations array. Respond with JSON only matching this schema: "
+    "You are a tuition-centre tutor helping a student. Answer using ONLY the provided "
+    "textbook excerpts below -- never use outside knowledge, even if you know the answer. "
+    "Cite the excerpts you used in the citations array. If the excerpts do not contain "
+    "enough information to answer the question, respond with exactly: \"I couldn't find "
+    "this in your textbook excerpts. Try rephrasing or specifying the chapter.\" and an "
+    "empty citations array. Respond with JSON only matching this schema: "
     '{"answer": "...", "citations": [{"book_id": "...", "chapter": "...", '
     '"section": "...", "page_range": "...", "content_type": "explanation", '
     '"excerpt": "short quote"}]}'
-)
-GENERAL_KNOWLEDGE_SYSTEM = (
-    "You are a tuition-centre tutor helping a student. No textbook excerpts were found for "
-    "this question. Answer from general knowledge appropriate for the given grade and subject. "
-    "Start with: \"This isn't covered in your textbook, but here's a general explanation:\" "
-    "Respond with JSON only: {\"answer\": \"...\", \"citations\": []}"
 )
 
 
@@ -166,14 +160,7 @@ def generate_answer(
     cfg = get_rag_config()
 
     if not context_blocks:
-        if not cfg.generation_enabled:
-            return _no_textbook_message()
-        user_prompt = f"Grade: {grade}\nSubject: {subject}\nQuestion: {question}"
-        return _call_answer_llm(
-            system_prompt=GENERAL_KNOWLEDGE_SYSTEM,
-            user_prompt=user_prompt,
-            context_blocks=[],
-        )
+        return _no_textbook_message()
 
     if not cfg.generation_enabled:
         return _extractive_answer(context_blocks)

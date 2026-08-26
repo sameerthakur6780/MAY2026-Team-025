@@ -3,7 +3,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import EmptyState from "@/components/EmptyState";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { useAuth } from "@/context/AuthContext";
-import { TEACHER_NAV } from "@/lib/navConfig";
+import { ADMIN_NAV } from "@/lib/navConfig";
 import { api, ApiError } from "@/lib/apiClient";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,7 +21,7 @@ function emptyForm() {
   return { class_id: "", subject_id: "", title: "", due_date: "", description: "", max_marks: "100" };
 }
 
-export default function TeacherHomework() {
+export default function AdminHomework() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [homework, setHomework] = useState([]);
@@ -98,7 +98,7 @@ export default function TeacherHomework() {
   };
 
   return (
-    <DashboardLayout title="Homework Assignment" subtitle="Assign homework to a class and track submissions." nav={TEACHER_NAV}>
+    <DashboardLayout title="Homework Assignment" subtitle="Assign homework to a class and track submissions." nav={ADMIN_NAV}>
       <div className="flex justify-end mb-6">
         <Dialog open={dialog} onOpenChange={setDialog}>
           <DialogTrigger asChild>
