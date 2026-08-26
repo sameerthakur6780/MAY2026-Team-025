@@ -22,9 +22,7 @@ import AdminAssignments from "@/pages/admin/Assignments";
 import AdminFinance from "@/pages/admin/Finance";
 import AdminAttendance from "@/pages/admin/Attendance";
 import AdminResources from "@/pages/admin/Resources";
-import AdminHomework from "@/pages/admin/Homework";
 import AdminTests from "@/pages/admin/Tests";
-import AdminGrading from "@/pages/admin/Grading";
 import AdminAlerts from "@/pages/admin/Alerts";
 
 import ParentDashboard from "@/pages/parent/Dashboard";
@@ -59,9 +57,7 @@ function App() {
             <Route path="/admin/assignments" element={<ProtectedRoute role="admin"><AdminAssignments /></ProtectedRoute>} />
             <Route path="/admin/attendance" element={<ProtectedRoute role="admin"><AdminAttendance /></ProtectedRoute>} />
             <Route path="/admin/resources" element={<ProtectedRoute role="admin"><AdminResources /></ProtectedRoute>} />
-            <Route path="/admin/homework" element={<ProtectedRoute role="admin"><AdminHomework /></ProtectedRoute>} />
             <Route path="/admin/tests" element={<ProtectedRoute role="admin"><AdminTests /></ProtectedRoute>} />
-            <Route path="/admin/grading" element={<ProtectedRoute role="admin"><AdminGrading /></ProtectedRoute>} />
             <Route path="/admin/alerts" element={<ProtectedRoute role="admin"><AdminAlerts /></ProtectedRoute>} />
 
             <Route path="/teacher/dashboard" element={<ProtectedRoute role="teacher"><TeacherDashboard /></ProtectedRoute>} />

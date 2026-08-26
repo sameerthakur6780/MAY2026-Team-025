@@ -237,7 +237,7 @@ export default function ResourcesManageView() {
                   resource={r}
                   onDownload={handleDownload}
                   downloading={downloadingId === r.id}
-                  canDelete={user?.role === "admin" || r.uploaded_by === user?.id}
+                  canDelete={r.uploaded_by === user?.id}
                   onDelete={setDeleteTarget}
                 />
               ))}

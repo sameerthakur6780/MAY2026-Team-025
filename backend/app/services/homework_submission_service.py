@@ -118,7 +118,8 @@ def grade_submission(submission_id, marks, feedback, graded_by):
 
     try:
         NotificationService.notify_marks_published(
-            submission.student, "homework", submission.homework.title, submission.homework.subject.name, marks
+            submission.student, "homework", submission.homework.title, submission.homework.subject.name, marks,
+            max_marks=submission.homework.max_marks,
         )
     except Exception:
         logger.exception("Failed to send marks_published notification for submission %s", submission.id)

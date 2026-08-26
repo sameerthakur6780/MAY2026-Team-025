@@ -1,0 +1,13 @@
+{% extends "email/base.html" %}
+{% block title %}Marks published: {{ item_title }}{% endblock %}
+{% block heading %}Marks published{% endblock %}
+{% block content %}
+<p style="margin:0 0 20px;text-align:center;color:#1f2328;">
+  Hi {{ recipient_name }}, marks for the {{ item_kind }} <strong>&ldquo;{{ item_title }}&rdquo;</strong> ({{ subject_name }}) have been published.
+</p>
+<div style="border:1px solid #d0d7de;border-radius:6px;padding:24px;text-align:center;margin:0 0 20px;">
+  <p style="margin:0 0 8px;font-size:13px;color:#656d76;">{{ subject_name }} &middot; {{ item_kind|capitalize }}</p>
+  <p style="margin:0;font-size:28px;font-weight:600;color:#1f2328;">{{ marks }}{% if max_marks %}<span style="color:#656d76;font-weight:400;"> / {{ max_marks }}</span>{% endif %}</p>
+</div>
+<p style="margin:0;text-align:center;color:#1f2328;">Log in to SmartBatch to view full feedback.</p>
+{% endblock %}
