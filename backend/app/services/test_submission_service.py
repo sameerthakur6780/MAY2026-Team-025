@@ -28,12 +28,18 @@ def _utcnow_for_due_compare():
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
+def is_real_submission(submission):
+    """False for AI-generated placeholders created when a student never uploaded."""
+    return "/no-response-" not in (submission.file_url or "")
+
+
 def serialize_submission(submission):
     return {
         "id": submission.id,
         "test_id": submission.test_id,
         "student_id": submission.student_id,
         "student_name": submission.student.user.full_name,
+        "submitted": is_real_submission(submission),
         "submitted_at": isoformat_utc(submission.submitted_at),
         "marks": submission.marks,
         "feedback": submission.feedback,

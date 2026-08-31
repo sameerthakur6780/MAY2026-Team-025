@@ -28,7 +28,7 @@ export default function TestsReadOnlyView() {
       .then(async ([testsRes, subsRes]) => {
         setTests(testsRes.items);
         const counts = {};
-        subsRes.items.forEach((s) => {
+        subsRes.items.filter((s) => s.submitted).forEach((s) => {
           counts[s.test_id] = (counts[s.test_id] || 0) + 1;
         });
         setSubmissionCountByTestId(counts);

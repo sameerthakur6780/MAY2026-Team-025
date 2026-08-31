@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import EmptyState from "@/components/EmptyState";
+import ConfirmDialog from "@/components/ConfirmDialog";
+import { useAuth } from "@/context/AuthContext";
 import { api, ApiError } from "@/lib/apiClient";
 import { uploadWithProgress } from "@/lib/uploadWithProgress";
 import { defaultDueDatetimeValue, formatDateTime, toLocalDatetimeValue } from "@/lib/utils";
@@ -13,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, ClipboardList, Upload, Play, CalendarClock, Pencil } from "lucide-react";
+import { Plus, ClipboardList, Upload, Play, CalendarClock, Pencil, Trash2 } from "lucide-react";
 
 const ALLOWED_EXTENSIONS = ["pdf", "jpg", "jpeg", "png", "doc", "docx", "txt"];
 const MAX_SIZE_BYTES = 20 * 1024 * 1024;
@@ -61,6 +63,7 @@ async function uploadResource(file, type, classId, subjectId) {
 }
 
 export default function TestsManageView() {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [tests, setTests] = useState([]);
   const [classes, setClasses] = useState([]);
@@ -77,6 +80,7 @@ export default function TestsManageView() {
   const [submitting, setSubmitting] = useState(false);
 
   const [scheduleTestId, setScheduleTestId] = useState(null);
+  const [scheduleDueDate, setScheduleDueDate] = useState(null);
   const [scheduleAt, setScheduleAt] = useState("");
   const [scheduling, setScheduling] = useState(false);
   const [runningId, setRunningId] = useState(null);
@@ -84,6 +88,7 @@ export default function TestsManageView() {
   const [editDueDateTestId, setEditDueDateTestId] = useState(null);
   const [editDueDateValue, setEditDueDateValue] = useState("");
   const [savingDueDate, setSavingDueDate] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   const qpRef = useRef(null);
   const akRef = useRef(null);
@@ -101,7 +106,7 @@ export default function TestsManageView() {
         setClasses(classesRes.items);
         setSubjects(subjectsRes.items);
         const counts = {};
-        subsRes.items.forEach((s) => {
+        subsRes.items.filter((s) => s.submitted).forEach((s) => {
           counts[s.test_id] = (counts[s.test_id] || 0) + 1;
         });
         setSubmissionCountByTestId(counts);
@@ -184,12 +189,16 @@ export default function TestsManageView() {
 
   const scheduleEvaluation = async () => {
     if (!scheduleAt) return toast.error("Pick a date and time");
+    if (scheduleDueDate && new Date(scheduleAt) <= new Date(scheduleDueDate)) {
+      return toast.error("Evaluation must be scheduled after the test due date");
+    }
     setScheduling(true);
     try {
       const scheduledAt = new Date(scheduleAt).toISOString();
       await api.post(`/api/tests/${scheduleTestId}/evaluation`, { scheduled_at: scheduledAt });
       toast.success("AI evaluation scheduled");
       setScheduleTestId(null);
+      setScheduleDueDate(null);
       setScheduleAt("");
       loadAll();
     } catch (err) {
@@ -212,12 +221,14 @@ export default function TestsManageView() {
     }
   };
 
-  const openSchedule = (testId) => {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(9, 0, 0, 0);
-    setScheduleAt(toLocalDatetimeValue(tomorrow));
-    setScheduleTestId(testId);
+  const openSchedule = (test) => {
+    const due = new Date(test.due_date);
+    const defaultAt = new Date(due.getTime() + 60 * 60 * 1000);
+    const pick = defaultAt > new Date() ? defaultAt : new Date(Date.now() + 24 * 60 * 60 * 1000);
+    pick.setMinutes(0, 0, 0);
+    setScheduleDueDate(test.due_date);
+    setScheduleAt(toLocalDatetimeValue(pick));
+    setScheduleTestId(test.id);
   };
 
   const openEditDueDate = (test) => {
@@ -240,6 +251,16 @@ export default function TestsManageView() {
       toast.error(err instanceof ApiError ? err.message : "Could not update due date.");
     } finally {
       setSavingDueDate(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    try {
+      await api.delete(`/api/tests/${deleteTarget.id}`);
+      toast.success("Test deleted");
+      loadAll();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Could not delete this test.");
     }
   };
 
@@ -353,7 +374,20 @@ export default function TestsManageView() {
                         </div>
                       )}
                     </div>
-                    <Badge className={status.className}>{status.label}</Badge>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Badge className={status.className}>{status.label}</Badge>
+                      {t.created_by === user?.id && t.evaluation_status !== "running" && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          data-testid={`delete-test-${t.id}`}
+                          onClick={() => setDeleteTarget(t)}
+                          aria-label="Delete test"
+                        >
+                          <Trash2 className="w-4 h-4 text-coral" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
                   <div className="text-xs text-muted-foreground">
                     {submissionCountByTestId[t.id] || 0} submission(s)
@@ -368,7 +402,7 @@ export default function TestsManageView() {
                         size="sm"
                         variant="outline"
                         className="border-soft gap-1.5 rounded-full"
-                        onClick={() => openSchedule(t.id)}
+                        onClick={() => openSchedule(t)}
                         disabled={!t.answer_key_resource_id}
                       >
                         <CalendarClock className="w-3.5 h-3.5" /> Schedule
@@ -390,13 +424,23 @@ export default function TestsManageView() {
         </div>
       )}
 
-      <Dialog open={scheduleTestId !== null} onOpenChange={(o) => !o && setScheduleTestId(null)}>
+      <Dialog open={scheduleTestId !== null} onOpenChange={(o) => { if (!o) { setScheduleTestId(null); setScheduleDueDate(null); } }}>
         <DialogContent>
           <DialogHeader><DialogTitle className="font-display">Schedule AI evaluation</DialogTitle></DialogHeader>
           <div className="space-y-4 mt-2">
+            {scheduleDueDate && (
+              <p className="text-xs text-muted-foreground">
+                Must be after the test due date ({formatDateTime(scheduleDueDate)}).
+              </p>
+            )}
             <div className="space-y-1.5">
               <Label>Evaluation date & time</Label>
-              <Input type="datetime-local" value={scheduleAt} onChange={(e) => setScheduleAt(e.target.value)} />
+              <Input
+                type="datetime-local"
+                value={scheduleAt}
+                min={scheduleDueDate ? toLocalDatetimeValue(new Date(new Date(scheduleDueDate).getTime() + 60 * 1000)) : undefined}
+                onChange={(e) => setScheduleAt(e.target.value)}
+              />
             </div>
             <Button disabled={scheduling} onClick={scheduleEvaluation} className="w-full bg-coral hover:bg-coral-deep text-ink">
               {scheduling ? "Scheduling…" : "Schedule evaluation"}
@@ -419,6 +463,18 @@ export default function TestsManageView() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="Delete this test?"
+        description={
+          deleteTarget
+            ? `"${deleteTarget.title}" and all student submissions will be permanently removed. The question paper and answer key files will remain in Resources.`
+            : ""
+        }
+        onConfirm={handleDelete}
+      />
     </>
   );
 }

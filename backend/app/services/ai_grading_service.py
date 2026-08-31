@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime, timezone
+from datetime import date, datetime, time, timezone
 
 from flask import current_app
 
@@ -29,6 +29,28 @@ _app = None
 
 def _utcnow():
     return datetime.now(timezone.utc)
+
+
+def _utc_naive(dt):
+    if dt.tzinfo is not None:
+        return dt.astimezone(timezone.utc).replace(tzinfo=None)
+    return dt
+
+
+def _due_datetime(test):
+    due = test.due_date
+    if isinstance(due, date) and not isinstance(due, datetime):
+        return datetime.combine(due, time(23, 59, 59))
+    return _utc_naive(due)
+
+
+def _ensure_scheduled_after_due(test, scheduled_at):
+    if _utc_naive(scheduled_at) <= _due_datetime(test):
+        raise ApiError(
+            "Evaluation must be scheduled after the test due date",
+            "invalid_schedule",
+            400,
+        )
 
 
 def _job_id(test_id):
@@ -97,8 +119,10 @@ def _remove_job(test_id):
 def schedule_evaluation(test_id, scheduled_at):
     test = get_test_or_404(test_id)
     _ensure_can_schedule(test)
-    if scheduled_at <= _utcnow():
+    scheduled_at = _utc_naive(scheduled_at)
+    if scheduled_at <= _utc_naive(_utcnow()):
         raise ApiError("scheduled_at must be in the future", "invalid_schedule", 400)
+    _ensure_scheduled_after_due(test, scheduled_at)
 
     test.evaluation_status = EvaluationStatus.SCHEDULED
     test.evaluation_scheduled_at = scheduled_at

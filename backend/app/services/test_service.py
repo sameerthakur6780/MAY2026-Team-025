@@ -1,3 +1,5 @@
+import logging
+
 from sqlalchemy import false
 from sqlalchemy.orm import joinedload
 
@@ -5,9 +7,13 @@ from app.extensions import db
 from app.models.academic import SchoolClass, Subject
 from app.models.resource import Resource, ResourceType
 from app.models.test import Test
+from app.models.test_evaluation import EvaluationStatus
+from app.services.storage import get_storage_service
 from app.utils.dates import isoformat_utc
 from app.utils.errors import ApiError, forbidden, not_found
 from app.utils.scoping import current_parent, current_student, current_teacher, teacher_class_ids
+
+logger = logging.getLogger(__name__)
 
 
 def serialize_test(test):
@@ -123,6 +129,32 @@ def update_test(test_id, data):
 
     db.session.commit()
     return test
+
+
+def delete_test(test_id, current_user_id):
+    test = get_test_or_404(test_id)
+    if test.created_by != current_user_id:
+        raise forbidden("Only the creator can delete this test")
+    if test.evaluation_status == EvaluationStatus.RUNNING:
+        raise ApiError(
+            "Cannot delete a test while its evaluation is running",
+            "evaluation_running",
+            409,
+        )
+
+    from app.services.ai_grading_service import _remove_job
+
+    _remove_job(test_id)
+
+    storage = get_storage_service()
+    for submission in list(test.submissions):
+        try:
+            storage.delete(submission.file_url)
+        except Exception:
+            logger.exception("Failed to delete submission file %s", submission.file_url)
+
+    db.session.delete(test)
+    db.session.commit()
 
 
 def _scoped_query(role):
