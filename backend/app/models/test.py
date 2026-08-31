@@ -12,7 +12,7 @@ class Test(db.Model, TimestampMixin):
     subject_id = db.Column(db.Integer, db.ForeignKey("subjects.id"), nullable=False, index=True)
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text)
-    due_date = db.Column(db.Date, nullable=False, index=True)
+    due_date = db.Column(db.DateTime, nullable=False, index=True)
     created_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     resource_id = db.Column(db.Integer, db.ForeignKey("resources.id"), nullable=True)
     question_paper_resource_id = db.Column(db.Integer, db.ForeignKey("resources.id"), nullable=True)

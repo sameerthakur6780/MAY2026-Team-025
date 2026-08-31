@@ -11,6 +11,7 @@ from app.services.ai_grading_service import (
 from app.schemas.test_schema import EvaluationScheduleSchema, TestCreateSchema, TestUpdateSchema
 from app.services.test_service import (
     create_test,
+    delete_test,
     get_test_scoped,
     list_tests_query,
     serialize_test,
@@ -87,6 +88,13 @@ def update_test_route(test_id):
 
     test = update_test(test_id, data)
     return jsonify(serialize_test(test)), 200
+
+
+@tests_bp.delete("/<int:test_id>")
+@role_required("teacher")
+def delete_test_route(test_id):
+    delete_test(test_id, current_user.id)
+    return "", 204
 
 
 @tests_bp.post("/<int:test_id>/submissions")

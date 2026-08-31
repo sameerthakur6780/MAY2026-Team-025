@@ -65,6 +65,10 @@ DEMO_PASSWORD = "Demo@1234"
 FIXTURES_DIR = Path(__file__).resolve().parent.parent / "tests" / "fixtures"
 TODAY = date.today()
 
+
+def _test_due_datetime(day):
+    return datetime.combine(day, time(23, 59))
+
 # Real inboxes for this demo, swapped in for one login of each role so the
 # app's actual email flows (fee reminders, payment receipts) land somewhere
 # a person can be shown, instead of @smartbatch.demo addresses nobody reads.
@@ -344,7 +348,7 @@ def create_homework_and_tests_with_grades(classes, subjects, teacher_a, students
             subject_id=subjects["Science"].id,
             title="Unit Test 1",
             description="Covers chapters 1-3.",
-            due_date=TODAY - timedelta(days=3),
+            due_date=_test_due_datetime(TODAY - timedelta(days=3)),
             created_by=teacher_a.user_id,
             max_marks=50,
         )

@@ -3,6 +3,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import EmptyState from "@/components/EmptyState";
 import { STUDENT_NAV } from "@/lib/navConfig";
 import { api, ApiError } from "@/lib/apiClient";
+import { formatDateTime } from "@/lib/utils";
 import { uploadWithProgress } from "@/lib/uploadWithProgress";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -41,6 +42,10 @@ async function downloadResource(resourceId) {
   }
 }
 
+function hasStudentSubmitted(submission) {
+  return Boolean(submission?.submitted);
+}
+
 export default function StudentTests() {
   const [loading, setLoading] = useState(true);
   const [tests, setTests] = useState([]);
@@ -68,7 +73,7 @@ export default function StudentTests() {
         const scoreMap = {};
         await Promise.all(
           subRes.items
-            .filter((s) => s.status === "graded")
+            .filter((s) => s.submitted && s.status === "graded")
             .map(async (s) => {
               try {
                 scoreMap[s.id] = await api.get(`/api/test-submissions/${s.id}/scores`);
@@ -87,8 +92,8 @@ export default function StudentTests() {
     loadAll();
   }, []);
 
-  const pending = tests.filter((t) => !submissionByTestId[t.id]);
-  const submitted = tests.filter((t) => submissionByTestId[t.id]);
+  const pending = tests.filter((t) => !hasStudentSubmitted(submissionByTestId[t.id]));
+  const submitted = tests.filter((t) => hasStudentSubmitted(submissionByTestId[t.id]));
 
   const openDialog = (test) => {
     setDialogTest(test);
@@ -135,8 +140,10 @@ export default function StudentTests() {
 
   const renderTestCard = (t) => {
     const submission = submissionByTestId[t.id];
-    const scores = submission ? scoresBySubmissionId[submission.id] : null;
+    const studentSubmitted = hasStudentSubmitted(submission);
+    const scores = studentSubmitted ? scoresBySubmissionId[submission.id] : null;
     const isExpanded = expandedId === t.id;
+    const isPastDue = new Date(t.due_date) < new Date();
 
     return (
       <Card key={t.id} data-testid={`stud-test-${t.id}`} className="border-soft shadow-none">
@@ -148,18 +155,23 @@ export default function StudentTests() {
             <div className="flex-1 min-w-0">
               <div className="font-medium text-foreground">{t.title}</div>
               <div className="text-xs text-muted-foreground mt-0.5">
-                {t.subject_name} &middot; Due {t.due_date} &middot; {t.max_marks} marks
+                {t.subject_name} &middot; Due {formatDateTime(t.due_date)} &middot; {t.max_marks} marks
               </div>
-              {submission && (
+              {studentSubmitted && (
                 <div className="text-xs text-lime mt-1 inline-flex items-center gap-1">
                   <CheckCircle2 className="w-3 h-3" /> Submitted {new Date(submission.submitted_at).toLocaleDateString()}
                 </div>
               )}
+              {!studentSubmitted && isPastDue && (
+                <div className="text-xs text-muted-foreground mt-1">Not submitted</div>
+              )}
             </div>
-            {submission ? (
+            {studentSubmitted ? (
               <Badge className={submission.status === "graded" ? "bg-lime text-ink border-0" : "bg-surface-2 text-muted-foreground border-0"}>
                 {submission.status === "graded" ? `Graded: ${submission.marks}/${t.max_marks}` : "Awaiting evaluation"}
               </Badge>
+            ) : isPastDue ? (
+              <Badge className="bg-surface-2 text-muted-foreground border-0">Past due</Badge>
             ) : (
               <Button
                 data-testid={`submit-test-${t.id}`}
@@ -184,7 +196,7 @@ export default function StudentTests() {
             )}
           </div>
 
-          {submission?.status === "graded" && scores?.scores?.length > 0 && (
+          {studentSubmitted && submission?.status === "graded" && scores?.scores?.length > 0 && (
             <div>
               <button
                 type="button"

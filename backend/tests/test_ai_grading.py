@@ -10,7 +10,7 @@ from app.models.homework import SubmissionStatus
 from app.models.resource import Resource, ResourceType
 from app.models.test import Test, TestSubmission
 from app.models.test_evaluation import EvaluationStatus, GradedSource, TestAnswerKeyQuestion, TestQuestionScore
-from app.services.ai_grading_service import _run_evaluation
+from app.services.ai_grading_service import _run_evaluation, init_evaluation_scheduler
 from app.services.test_submission_service import grade_submission
 from conftest import (
     create_assignment,
@@ -48,7 +48,7 @@ def _create_test_with_resources(app, school_class, subject, teacher_row=None):
             "class_id": school_class.id,
             "subject_id": subject.id,
             "title": "Unit Test 1",
-            "due_date": "2026-09-01",
+            "due_date": "2026-09-01T23:59:00",
             "max_marks": 10,
             "question_paper_resource_id": qp["id"],
             "answer_key_resource_id": ak["id"],
@@ -123,15 +123,36 @@ def test_schedule_evaluation_requires_answer_key(teacher):
             "class_id": school_class.id,
             "subject_id": subject.id,
             "title": "No key test",
-            "due_date": "2026-09-01",
+            "due_date": "2026-09-01T23:59:00",
             "max_marks": 10,
         },
     )
     test_id = resp.get_json()["id"]
-    scheduled_at = (datetime.now(timezone.utc) + timedelta(days=1)).isoformat()
+    scheduled_at = "2026-09-02T09:00:00"
     bad = authed.post(f"/api/tests/{test_id}/evaluation", json={"scheduled_at": scheduled_at})
     assert bad.status_code == 400
     assert bad.get_json()["error"] == "missing_answer_key"
+
+
+def test_schedule_evaluation_must_be_after_due_date(app, grading_patches):
+    school_class = create_class(12)
+    subject = create_subject(f"Maths-{next_id()}")
+    teacher_row = create_teacher()
+    create_assignment(school_class.id, subject.id, teacher_row.id)
+    teacher_authed = login_as(app.test_client(), teacher_row.user.email)
+    test_data, _, _ = _create_test_with_resources(app, school_class, subject, teacher_row=teacher_row)
+    bad = teacher_authed.post(
+        f"/api/tests/{test_data['id']}/evaluation",
+        json={"scheduled_at": "2026-09-01T12:00:00"},
+    )
+    assert bad.status_code == 400
+    assert bad.get_json()["error"] == "invalid_schedule"
+
+    ok = teacher_authed.post(
+        f"/api/tests/{test_data['id']}/evaluation",
+        json={"scheduled_at": "2026-09-02T09:00:00"},
+    )
+    assert ok.status_code == 201
 
 
 def test_admin_cannot_create_schedule_or_run_tests(app, admin):
@@ -145,13 +166,13 @@ def test_admin_cannot_create_schedule_or_run_tests(app, admin):
             "class_id": school_class.id,
             "subject_id": subject.id,
             "title": "Admin-created test",
-            "due_date": "2026-09-01",
+            "due_date": "2026-09-01T23:59:00",
             "max_marks": 10,
         },
     )
     assert create_resp.status_code == 403
 
-    scheduled_at = (datetime.now(timezone.utc) + timedelta(days=1)).isoformat()
+    scheduled_at = "2026-09-02T09:00:00"
     schedule_resp = admin.post(f"/api/tests/{test_data['id']}/evaluation", json={"scheduled_at": scheduled_at})
     assert schedule_resp.status_code == 403
 
@@ -198,6 +219,13 @@ def test_run_evaluation_grades_submission_and_missing_student(app, grading_patch
         missing = next(s for s in submissions if "no-response" in s.file_url)
         assert missing.marks == 0
         assert missing.feedback == "No response submitted"
+
+        from app.services.test_submission_service import is_real_submission, serialize_submission
+
+        assert is_real_submission(graded_with_response) is True
+        assert is_real_submission(missing) is False
+        assert serialize_submission(graded_with_response)["submitted"] is True
+        assert serialize_submission(missing)["submitted"] is False
 
         scores = TestQuestionScore.query.filter_by(submission_id=graded_with_response.id).all()
         assert len(scores) == 2
@@ -284,3 +312,49 @@ def test_manual_grade_overrides_ai_marks(app, grading_patches):
         db.session.refresh(submission)
         assert submission.marks == 10
         assert submission.graded_source == GradedSource.MANUAL
+
+
+def test_init_evaluation_scheduler_resets_stuck_running(app, grading_patches):
+    school_class = create_class(11)
+    subject = create_subject(f"History-{next_id()}")
+    teacher_row = create_teacher()
+    create_assignment(school_class.id, subject.id, teacher_row.id)
+    test_data, _, _ = _create_test_with_resources(app, school_class, subject, teacher_row=teacher_row)
+
+    with app.app_context():
+        test = Test.query.get(test_data["id"])
+        test.evaluation_status = EvaluationStatus.RUNNING
+        test.evaluation_started_at = datetime.now(timezone.utc)
+        db.session.commit()
+
+        app.config["SCHEDULER_ENABLED"] = True
+        init_evaluation_scheduler(app)
+
+        db.session.refresh(test)
+        assert test.evaluation_status == EvaluationStatus.FAILED
+        assert "server restart" in test.evaluation_error.lower()
+
+    teacher_authed = login_as(app.test_client(), teacher_row.user.email)
+    run_resp = teacher_authed.post(f"/api/tests/{test_data['id']}/evaluation/run")
+    assert run_resp.status_code == 202
+
+
+def test_submit_test_rejects_past_due(app, grading_patches):
+    school_class = create_class(12)
+    subject = create_subject(f"English-{next_id()}")
+    test_data, _, _ = _create_test_with_resources(app, school_class, subject)
+    student_row = create_student(class_id=school_class.id)
+
+    with app.app_context():
+        test = Test.query.get(test_data["id"])
+        test.due_date = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=1)
+        db.session.commit()
+
+    student_authed = login_as(app.test_client(), student_row.user.email)
+    resp = student_authed.post(
+        f"/api/tests/{test_data['id']}/submissions",
+        data={"file": (io.BytesIO(b"%PDF student answers"), "answers.pdf")},
+        content_type="multipart/form-data",
+    )
+    assert resp.status_code == 403
+    assert resp.get_json()["error"] == "past_due"

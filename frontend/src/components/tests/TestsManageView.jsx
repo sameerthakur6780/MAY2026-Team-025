@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import EmptyState from "@/components/EmptyState";
+import ConfirmDialog from "@/components/ConfirmDialog";
+import { useAuth } from "@/context/AuthContext";
 import { api, ApiError } from "@/lib/apiClient";
 import { uploadWithProgress } from "@/lib/uploadWithProgress";
+import { defaultDueDatetimeValue, formatDateTime, toLocalDatetimeValue } from "@/lib/utils";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, ClipboardList, Upload, Play, CalendarClock } from "lucide-react";
+import { Plus, ClipboardList, Upload, Play, CalendarClock, Pencil, Trash2 } from "lucide-react";
 
 const ALLOWED_EXTENSIONS = ["pdf", "jpg", "jpeg", "png", "doc", "docx", "txt"];
 const MAX_SIZE_BYTES = 20 * 1024 * 1024;
@@ -30,7 +33,7 @@ function emptyForm() {
     class_id: "",
     subject_id: "",
     title: "",
-    due_date: "",
+    due_date: defaultDueDatetimeValue(),
     description: "",
     max_marks: "100",
   };
@@ -50,11 +53,6 @@ function validateFile(file) {
   return null;
 }
 
-function toLocalDatetimeValue(date) {
-  const pad = (n) => String(n).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
-
 async function uploadResource(file, type, classId, subjectId) {
   const formData = new FormData();
   formData.append("file", file);
@@ -65,6 +63,7 @@ async function uploadResource(file, type, classId, subjectId) {
 }
 
 export default function TestsManageView() {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [tests, setTests] = useState([]);
   const [classes, setClasses] = useState([]);
@@ -81,9 +80,15 @@ export default function TestsManageView() {
   const [submitting, setSubmitting] = useState(false);
 
   const [scheduleTestId, setScheduleTestId] = useState(null);
+  const [scheduleDueDate, setScheduleDueDate] = useState(null);
   const [scheduleAt, setScheduleAt] = useState("");
   const [scheduling, setScheduling] = useState(false);
   const [runningId, setRunningId] = useState(null);
+
+  const [editDueDateTestId, setEditDueDateTestId] = useState(null);
+  const [editDueDateValue, setEditDueDateValue] = useState("");
+  const [savingDueDate, setSavingDueDate] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   const qpRef = useRef(null);
   const akRef = useRef(null);
@@ -101,7 +106,7 @@ export default function TestsManageView() {
         setClasses(classesRes.items);
         setSubjects(subjectsRes.items);
         const counts = {};
-        subsRes.items.forEach((s) => {
+        subsRes.items.filter((s) => s.submitted).forEach((s) => {
           counts[s.test_id] = (counts[s.test_id] || 0) + 1;
         });
         setSubmissionCountByTestId(counts);
@@ -125,13 +130,6 @@ export default function TestsManageView() {
   useEffect(() => {
     loadAll();
   }, []);
-
-  useEffect(() => {
-    const running = tests.some((t) => t.evaluation_status === "running");
-    if (!running) return undefined;
-    const timer = setInterval(loadAll, 5000);
-    return () => clearInterval(timer);
-  }, [tests]);
 
   const resetCreateDialog = () => {
     setForm(emptyForm());
@@ -172,7 +170,7 @@ export default function TestsManageView() {
         subject_id: subjectId,
         title: form.title,
         description: form.description || null,
-        due_date: form.due_date,
+        due_date: new Date(form.due_date).toISOString(),
         max_marks: Number(form.max_marks),
         question_paper_resource_id: qpResource.id,
         answer_key_resource_id: akResource.id,
@@ -191,12 +189,16 @@ export default function TestsManageView() {
 
   const scheduleEvaluation = async () => {
     if (!scheduleAt) return toast.error("Pick a date and time");
+    if (scheduleDueDate && new Date(scheduleAt) <= new Date(scheduleDueDate)) {
+      return toast.error("Evaluation must be scheduled after the test due date");
+    }
     setScheduling(true);
     try {
       const scheduledAt = new Date(scheduleAt).toISOString();
       await api.post(`/api/tests/${scheduleTestId}/evaluation`, { scheduled_at: scheduledAt });
       toast.success("AI evaluation scheduled");
       setScheduleTestId(null);
+      setScheduleDueDate(null);
       setScheduleAt("");
       loadAll();
     } catch (err) {
@@ -219,12 +221,47 @@ export default function TestsManageView() {
     }
   };
 
-  const openSchedule = (testId) => {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(9, 0, 0, 0);
-    setScheduleAt(toLocalDatetimeValue(tomorrow));
-    setScheduleTestId(testId);
+  const openSchedule = (test) => {
+    const due = new Date(test.due_date);
+    const defaultAt = new Date(due.getTime() + 60 * 60 * 1000);
+    const pick = defaultAt > new Date() ? defaultAt : new Date(Date.now() + 24 * 60 * 60 * 1000);
+    pick.setMinutes(0, 0, 0);
+    setScheduleDueDate(test.due_date);
+    setScheduleAt(toLocalDatetimeValue(pick));
+    setScheduleTestId(test.id);
+  };
+
+  const openEditDueDate = (test) => {
+    setEditDueDateValue(toLocalDatetimeValue(new Date(test.due_date)));
+    setEditDueDateTestId(test.id);
+  };
+
+  const saveDueDate = async () => {
+    if (!editDueDateValue) return toast.error("Pick a date and time");
+    setSavingDueDate(true);
+    try {
+      await api.patch(`/api/tests/${editDueDateTestId}`, {
+        due_date: new Date(editDueDateValue).toISOString(),
+      });
+      toast.success("Due date updated");
+      setEditDueDateTestId(null);
+      setEditDueDateValue("");
+      loadAll();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Could not update due date.");
+    } finally {
+      setSavingDueDate(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    try {
+      await api.delete(`/api/tests/${deleteTarget.id}`);
+      toast.success("Test deleted");
+      loadAll();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Could not delete this test.");
+    }
   };
 
   return (
@@ -265,8 +302,8 @@ export default function TestsManageView() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label>Due date</Label>
-                  <Input type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} />
+                  <Label>Due date & time</Label>
+                  <Input type="datetime-local" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} />
                 </div>
                 <div className="space-y-1.5">
                   <Label>Max marks</Label>
@@ -320,11 +357,37 @@ export default function TestsManageView() {
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <div className="font-medium text-foreground">{t.title}</div>
-                      <div className="text-xs text-muted-foreground mt-0.5">
-                        Grade {t.grade} &middot; {t.subject_name} &middot; Due {t.due_date}
+                      <div className="text-xs text-muted-foreground mt-0.5 inline-flex items-center gap-1.5">
+                        Grade {t.grade} &middot; {t.subject_name} &middot; Due {formatDateTime(t.due_date)}
+                        <button
+                          type="button"
+                          onClick={() => openEditDueDate(t)}
+                          className="text-coral hover:text-coral-deep"
+                          aria-label="Edit due date"
+                        >
+                          <Pencil className="w-3 h-3" />
+                        </button>
                       </div>
+                      {evalInfo?.evaluation_scheduled_at && (
+                        <div className="text-xs text-muted-foreground mt-0.5">
+                          Evaluation {formatDateTime(evalInfo.evaluation_scheduled_at)}
+                        </div>
+                      )}
                     </div>
-                    <Badge className={status.className}>{status.label}</Badge>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Badge className={status.className}>{status.label}</Badge>
+                      {t.created_by === user?.id && t.evaluation_status !== "running" && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          data-testid={`delete-test-${t.id}`}
+                          onClick={() => setDeleteTarget(t)}
+                          aria-label="Delete test"
+                        >
+                          <Trash2 className="w-4 h-4 text-coral" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
                   <div className="text-xs text-muted-foreground">
                     {submissionCountByTestId[t.id] || 0} submission(s)
@@ -339,7 +402,7 @@ export default function TestsManageView() {
                         size="sm"
                         variant="outline"
                         className="border-soft gap-1.5 rounded-full"
-                        onClick={() => openSchedule(t.id)}
+                        onClick={() => openSchedule(t)}
                         disabled={!t.answer_key_resource_id}
                       >
                         <CalendarClock className="w-3.5 h-3.5" /> Schedule
@@ -361,13 +424,23 @@ export default function TestsManageView() {
         </div>
       )}
 
-      <Dialog open={scheduleTestId !== null} onOpenChange={(o) => !o && setScheduleTestId(null)}>
+      <Dialog open={scheduleTestId !== null} onOpenChange={(o) => { if (!o) { setScheduleTestId(null); setScheduleDueDate(null); } }}>
         <DialogContent>
           <DialogHeader><DialogTitle className="font-display">Schedule AI evaluation</DialogTitle></DialogHeader>
           <div className="space-y-4 mt-2">
+            {scheduleDueDate && (
+              <p className="text-xs text-muted-foreground">
+                Must be after the test due date ({formatDateTime(scheduleDueDate)}).
+              </p>
+            )}
             <div className="space-y-1.5">
               <Label>Evaluation date & time</Label>
-              <Input type="datetime-local" value={scheduleAt} onChange={(e) => setScheduleAt(e.target.value)} />
+              <Input
+                type="datetime-local"
+                value={scheduleAt}
+                min={scheduleDueDate ? toLocalDatetimeValue(new Date(new Date(scheduleDueDate).getTime() + 60 * 1000)) : undefined}
+                onChange={(e) => setScheduleAt(e.target.value)}
+              />
             </div>
             <Button disabled={scheduling} onClick={scheduleEvaluation} className="w-full bg-coral hover:bg-coral-deep text-ink">
               {scheduling ? "Scheduling…" : "Schedule evaluation"}
@@ -375,6 +448,33 @@ export default function TestsManageView() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={editDueDateTestId !== null} onOpenChange={(o) => !o && setEditDueDateTestId(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle className="font-display">Edit due date</DialogTitle></DialogHeader>
+          <div className="space-y-4 mt-2">
+            <div className="space-y-1.5">
+              <Label>Due date & time</Label>
+              <Input type="datetime-local" value={editDueDateValue} onChange={(e) => setEditDueDateValue(e.target.value)} />
+            </div>
+            <Button disabled={savingDueDate} onClick={saveDueDate} className="w-full bg-coral hover:bg-coral-deep text-ink">
+              {savingDueDate ? "Saving…" : "Save due date"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="Delete this test?"
+        description={
+          deleteTarget
+            ? `"${deleteTarget.title}" and all student submissions will be permanently removed. The question paper and answer key files will remain in Resources.`
+            : ""
+        }
+        onConfirm={handleDelete}
+      />
     </>
   );
 }

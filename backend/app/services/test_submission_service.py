@@ -16,10 +16,21 @@ from app.models.test import Test, TestSubmission
 from app.models.test_evaluation import GradedSource, TestAnswerKeyQuestion, TestQuestionScore
 from app.services.notification_service import NotificationService
 from app.services.storage import get_storage_service
+from app.utils.dates import isoformat_utc
 from app.utils.errors import ApiError, forbidden, not_found
 from app.utils.scoping import current_parent, current_student, current_teacher, teacher_class_ids
 
 logger = logging.getLogger(__name__)
+
+
+def _utcnow_for_due_compare():
+    """Return current UTC time, comparable with naive UTC datetimes from the DB."""
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
+def is_real_submission(submission):
+    """False for AI-generated placeholders created when a student never uploaded."""
+    return "/no-response-" not in (submission.file_url or "")
 
 
 def serialize_submission(submission):
@@ -28,7 +39,8 @@ def serialize_submission(submission):
         "test_id": submission.test_id,
         "student_id": submission.student_id,
         "student_name": submission.student.user.full_name,
-        "submitted_at": submission.submitted_at.isoformat(),
+        "submitted": is_real_submission(submission),
+        "submitted_at": isoformat_utc(submission.submitted_at),
         "marks": submission.marks,
         "feedback": submission.feedback,
         "graded_by": submission.graded_by,
@@ -37,7 +49,7 @@ def serialize_submission(submission):
         "ai_marks": submission.ai_marks,
         "ai_feedback": submission.ai_feedback,
         "ai_model_used": submission.ai_model_used,
-        "ai_graded_at": submission.ai_graded_at.isoformat() if submission.ai_graded_at else None,
+        "ai_graded_at": isoformat_utc(submission.ai_graded_at),
         "graded_source": submission.graded_source.value if submission.graded_source else None,
     }
 
@@ -78,6 +90,9 @@ def submit_test(test_id, file_storage, student_id):
     student = Student.query.get(student_id)
     if student is None or student.class_id != test.class_id:
         raise ApiError("You are not enrolled in this test's class", "invalid_student_class", 400)
+
+    if _utcnow_for_due_compare() > test.due_date:
+        raise ApiError("The due date for this test has passed", "past_due", 403)
 
     if not file_storage or not file_storage.filename:
         raise ApiError("No file was uploaded", "missing_file", 400)

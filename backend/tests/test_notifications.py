@@ -3,7 +3,7 @@ into attendance/homework/grading. fee_due_reminder/payment_received have no
 caller yet (no Fee/Payment model exists) -- tested directly to prove
 they're fully functional and ready for that module to call."""
 import time
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, time as dt_time, timedelta, timezone
 
 from conftest import (
     create_admin_user,
@@ -325,7 +325,7 @@ def test_grade_test_submission_notifies_only_student_when_no_parent_linked(app):
             class_id=school_class.id,
             subject_id=subject.id,
             title="Unit Test 1",
-            due_date=date(2026, 3, 5),
+            due_date=datetime.combine(date(2026, 3, 5), dt_time(23, 59)),
             created_by=teacher_row.user_id,
         )
         db.session.add(test_row)
