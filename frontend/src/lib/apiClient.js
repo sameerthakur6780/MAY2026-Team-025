@@ -1,5 +1,9 @@
 
-export const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+export const Config = {
+  API_KEY: process.env.API_KEY,
+};
+
+export const BASE_URL = Config.API_KEY
 
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
