@@ -10,7 +10,7 @@ from app.models.homework import SubmissionStatus
 from app.models.resource import Resource, ResourceType
 from app.models.test import Test, TestSubmission
 from app.models.test_evaluation import EvaluationStatus, GradedSource, TestAnswerKeyQuestion, TestQuestionScore
-from app.services.ai_grading_service import _run_evaluation
+from app.services.ai_grading_service import _run_evaluation, init_evaluation_scheduler
 from app.services.test_submission_service import grade_submission
 from conftest import (
     create_assignment,
@@ -284,3 +284,49 @@ def test_manual_grade_overrides_ai_marks(app, grading_patches):
         db.session.refresh(submission)
         assert submission.marks == 10
         assert submission.graded_source == GradedSource.MANUAL
+
+
+def test_init_evaluation_scheduler_resets_stuck_running(app, grading_patches):
+    school_class = create_class(11)
+    subject = create_subject(f"History-{next_id()}")
+    teacher_row = create_teacher()
+    create_assignment(school_class.id, subject.id, teacher_row.id)
+    test_data, _, _ = _create_test_with_resources(app, school_class, subject, teacher_row=teacher_row)
+
+    with app.app_context():
+        test = Test.query.get(test_data["id"])
+        test.evaluation_status = EvaluationStatus.RUNNING
+        test.evaluation_started_at = datetime.now(timezone.utc)
+        db.session.commit()
+
+        app.config["SCHEDULER_ENABLED"] = True
+        init_evaluation_scheduler(app)
+
+        db.session.refresh(test)
+        assert test.evaluation_status == EvaluationStatus.FAILED
+        assert "server restart" in test.evaluation_error.lower()
+
+    teacher_authed = login_as(app.test_client(), teacher_row.user.email)
+    run_resp = teacher_authed.post(f"/api/tests/{test_data['id']}/evaluation/run")
+    assert run_resp.status_code == 202
+
+
+def test_submit_test_rejects_past_due(app, grading_patches):
+    school_class = create_class(12)
+    subject = create_subject(f"English-{next_id()}")
+    test_data, _, _ = _create_test_with_resources(app, school_class, subject)
+    student_row = create_student(class_id=school_class.id)
+
+    with app.app_context():
+        test = Test.query.get(test_data["id"])
+        test.due_date = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=1)
+        db.session.commit()
+
+    student_authed = login_as(app.test_client(), student_row.user.email)
+    resp = student_authed.post(
+        f"/api/tests/{test_data['id']}/submissions",
+        data={"file": (io.BytesIO(b"%PDF student answers"), "answers.pdf")},
+        content_type="multipart/form-data",
+    )
+    assert resp.status_code == 403
+    assert resp.get_json()["error"] == "past_due"

@@ -161,6 +161,8 @@ export default function StudentTests() {
               <Badge className={submission.status === "graded" ? "bg-lime text-ink border-0" : "bg-surface-2 text-muted-foreground border-0"}>
                 {submission.status === "graded" ? `Graded: ${submission.marks}/${t.max_marks}` : "Awaiting evaluation"}
               </Badge>
+            ) : new Date(t.due_date) < new Date() ? (
+              <Badge className="bg-surface-2 text-muted-foreground border-0">Past due</Badge>
             ) : (
               <Button
                 data-testid={`submit-test-${t.id}`}

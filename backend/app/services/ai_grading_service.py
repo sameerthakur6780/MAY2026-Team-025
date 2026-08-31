@@ -17,6 +17,7 @@ from app.models.test_evaluation import EvaluationStatus, GradedSource, TestAnswe
 from app.services.notification_service import NotificationService
 from app.services.storage import get_storage_service
 from app.services.test_service import get_test_or_404
+from app.utils.dates import isoformat_utc
 from app.utils.errors import ApiError, not_found
 from rag.extraction.pdf_extractor import extract_pdf
 from rag.generation.grading import ParsedQuestion, grade_response, parse_answer_key
@@ -53,9 +54,9 @@ def serialize_evaluation_status(test):
     return {
         "test_id": test.id,
         "evaluation_status": test.evaluation_status.value,
-        "evaluation_scheduled_at": test.evaluation_scheduled_at.isoformat() if test.evaluation_scheduled_at else None,
-        "evaluation_started_at": test.evaluation_started_at.isoformat() if test.evaluation_started_at else None,
-        "evaluation_completed_at": test.evaluation_completed_at.isoformat() if test.evaluation_completed_at else None,
+        "evaluation_scheduled_at": isoformat_utc(test.evaluation_scheduled_at),
+        "evaluation_started_at": isoformat_utc(test.evaluation_started_at),
+        "evaluation_completed_at": isoformat_utc(test.evaluation_completed_at),
         "evaluation_error": test.evaluation_error,
         "total_students": total_students,
         "submitted_count": submitted_count,
@@ -418,6 +419,19 @@ def init_evaluation_scheduler(app):
 
     with app.app_context():
         try:
+            stuck = Test.query.filter(Test.evaluation_status == EvaluationStatus.RUNNING).all()
+            for test in stuck:
+                test.evaluation_status = EvaluationStatus.FAILED
+                test.evaluation_error = (
+                    "Evaluation was interrupted by a server restart. Use Run now to retry."
+                )
+            if stuck:
+                db.session.commit()
+                logger.warning(
+                    "Reset %d test evaluation(s) stuck in RUNNING after restart",
+                    len(stuck),
+                )
+
             pending = Test.query.filter(
                 Test.evaluation_status == EvaluationStatus.SCHEDULED,
                 Test.evaluation_scheduled_at.isnot(None),

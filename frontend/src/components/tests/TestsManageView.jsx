@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, ClipboardList, Upload, Play, CalendarClock } from "lucide-react";
+import { Plus, ClipboardList, Upload, Play, CalendarClock, Pencil } from "lucide-react";
 
 const ALLOWED_EXTENSIONS = ["pdf", "jpg", "jpeg", "png", "doc", "docx", "txt"];
 const MAX_SIZE_BYTES = 20 * 1024 * 1024;
@@ -80,6 +80,10 @@ export default function TestsManageView() {
   const [scheduleAt, setScheduleAt] = useState("");
   const [scheduling, setScheduling] = useState(false);
   const [runningId, setRunningId] = useState(null);
+
+  const [editDueDateTestId, setEditDueDateTestId] = useState(null);
+  const [editDueDateValue, setEditDueDateValue] = useState("");
+  const [savingDueDate, setSavingDueDate] = useState(false);
 
   const qpRef = useRef(null);
   const akRef = useRef(null);
@@ -216,6 +220,29 @@ export default function TestsManageView() {
     setScheduleTestId(testId);
   };
 
+  const openEditDueDate = (test) => {
+    setEditDueDateValue(toLocalDatetimeValue(new Date(test.due_date)));
+    setEditDueDateTestId(test.id);
+  };
+
+  const saveDueDate = async () => {
+    if (!editDueDateValue) return toast.error("Pick a date and time");
+    setSavingDueDate(true);
+    try {
+      await api.patch(`/api/tests/${editDueDateTestId}`, {
+        due_date: new Date(editDueDateValue).toISOString(),
+      });
+      toast.success("Due date updated");
+      setEditDueDateTestId(null);
+      setEditDueDateValue("");
+      loadAll();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Could not update due date.");
+    } finally {
+      setSavingDueDate(false);
+    }
+  };
+
   return (
     <>
       <div className="flex justify-end mb-6">
@@ -309,8 +336,16 @@ export default function TestsManageView() {
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <div className="font-medium text-foreground">{t.title}</div>
-                      <div className="text-xs text-muted-foreground mt-0.5">
+                      <div className="text-xs text-muted-foreground mt-0.5 inline-flex items-center gap-1.5">
                         Grade {t.grade} &middot; {t.subject_name} &middot; Due {formatDateTime(t.due_date)}
+                        <button
+                          type="button"
+                          onClick={() => openEditDueDate(t)}
+                          className="text-coral hover:text-coral-deep"
+                          aria-label="Edit due date"
+                        >
+                          <Pencil className="w-3 h-3" />
+                        </button>
                       </div>
                       {evalInfo?.evaluation_scheduled_at && (
                         <div className="text-xs text-muted-foreground mt-0.5">
@@ -365,6 +400,21 @@ export default function TestsManageView() {
             </div>
             <Button disabled={scheduling} onClick={scheduleEvaluation} className="w-full bg-coral hover:bg-coral-deep text-ink">
               {scheduling ? "Scheduling…" : "Schedule evaluation"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={editDueDateTestId !== null} onOpenChange={(o) => !o && setEditDueDateTestId(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle className="font-display">Edit due date</DialogTitle></DialogHeader>
+          <div className="space-y-4 mt-2">
+            <div className="space-y-1.5">
+              <Label>Due date & time</Label>
+              <Input type="datetime-local" value={editDueDateValue} onChange={(e) => setEditDueDateValue(e.target.value)} />
+            </div>
+            <Button disabled={savingDueDate} onClick={saveDueDate} className="w-full bg-coral hover:bg-coral-deep text-ink">
+              {savingDueDate ? "Saving…" : "Save due date"}
             </Button>
           </div>
         </DialogContent>

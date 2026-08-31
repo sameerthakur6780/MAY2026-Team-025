@@ -5,6 +5,7 @@ from app.extensions import db
 from app.models.academic import SchoolClass, Subject
 from app.models.resource import Resource, ResourceType
 from app.models.test import Test
+from app.utils.dates import isoformat_utc
 from app.utils.errors import ApiError, forbidden, not_found
 from app.utils.scoping import current_parent, current_student, current_teacher, teacher_class_ids
 
@@ -18,7 +19,7 @@ def serialize_test(test):
         "subject_name": test.subject.name,
         "title": test.title,
         "description": test.description,
-        "due_date": test.due_date.isoformat(),
+        "due_date": isoformat_utc(test.due_date),
         "created_by": test.created_by,
         "creator_name": test.creator.full_name,
         "resource_id": test.resource_id,
@@ -26,12 +27,12 @@ def serialize_test(test):
         "answer_key_resource_id": test.answer_key_resource_id,
         "max_marks": test.max_marks,
         "evaluation_status": test.evaluation_status.value if test.evaluation_status else "not_scheduled",
-        "evaluation_scheduled_at": test.evaluation_scheduled_at.isoformat() if test.evaluation_scheduled_at else None,
-        "evaluation_started_at": test.evaluation_started_at.isoformat() if test.evaluation_started_at else None,
-        "evaluation_completed_at": test.evaluation_completed_at.isoformat() if test.evaluation_completed_at else None,
+        "evaluation_scheduled_at": isoformat_utc(test.evaluation_scheduled_at),
+        "evaluation_started_at": isoformat_utc(test.evaluation_started_at),
+        "evaluation_completed_at": isoformat_utc(test.evaluation_completed_at),
         "evaluation_error": test.evaluation_error,
-        "created_at": test.created_at.isoformat(),
-        "updated_at": test.updated_at.isoformat(),
+        "created_at": isoformat_utc(test.created_at),
+        "updated_at": isoformat_utc(test.updated_at),
     }
 
 
