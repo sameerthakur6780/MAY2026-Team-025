@@ -1,7 +1,7 @@
 """/api/resources upload/list/get/download/delete, role-scoped."""
 
 import io
-from datetime import date
+from datetime import date, datetime, time
 
 from app.extensions import db
 from app.models.homework import Homework
@@ -440,7 +440,7 @@ def test_delete_resource_referenced_by_test_question_paper_is_conflict(admin, ap
             class_id=school_class.id,
             subject_id=subject.id,
             title="Unit Test 1",
-            due_date=date(2026, 1, 1),
+            due_date=datetime.combine(date(2026, 1, 1), time(23, 59)),
             created_by=1,
             question_paper_resource_id=resource_id,
         )
@@ -462,7 +462,7 @@ def test_delete_resource_referenced_by_test_answer_key_is_conflict(admin, app):
             class_id=school_class.id,
             subject_id=subject.id,
             title="Unit Test 1",
-            due_date=date(2026, 1, 1),
+            due_date=datetime.combine(date(2026, 1, 1), time(23, 59)),
             created_by=1,
             answer_key_resource_id=resource_id,
         )

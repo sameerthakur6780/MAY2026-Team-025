@@ -3,6 +3,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import EmptyState from "@/components/EmptyState";
 import { STUDENT_NAV } from "@/lib/navConfig";
 import { api, ApiError } from "@/lib/apiClient";
+import { formatDateTime } from "@/lib/utils";
 import { uploadWithProgress } from "@/lib/uploadWithProgress";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -148,7 +149,7 @@ export default function StudentTests() {
             <div className="flex-1 min-w-0">
               <div className="font-medium text-foreground">{t.title}</div>
               <div className="text-xs text-muted-foreground mt-0.5">
-                {t.subject_name} &middot; Due {t.due_date} &middot; {t.max_marks} marks
+                {t.subject_name} &middot; Due {formatDateTime(t.due_date)} &middot; {t.max_marks} marks
               </div>
               {submission && (
                 <div className="text-xs text-lime mt-1 inline-flex items-center gap-1">

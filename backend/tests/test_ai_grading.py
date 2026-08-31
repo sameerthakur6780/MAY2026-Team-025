@@ -48,7 +48,7 @@ def _create_test_with_resources(app, school_class, subject, teacher_row=None):
             "class_id": school_class.id,
             "subject_id": subject.id,
             "title": "Unit Test 1",
-            "due_date": "2026-09-01",
+            "due_date": "2026-09-01T23:59:00",
             "max_marks": 10,
             "question_paper_resource_id": qp["id"],
             "answer_key_resource_id": ak["id"],
@@ -123,7 +123,7 @@ def test_schedule_evaluation_requires_answer_key(teacher):
             "class_id": school_class.id,
             "subject_id": subject.id,
             "title": "No key test",
-            "due_date": "2026-09-01",
+            "due_date": "2026-09-01T23:59:00",
             "max_marks": 10,
         },
     )
@@ -145,7 +145,7 @@ def test_admin_cannot_create_schedule_or_run_tests(app, admin):
             "class_id": school_class.id,
             "subject_id": subject.id,
             "title": "Admin-created test",
-            "due_date": "2026-09-01",
+            "due_date": "2026-09-01T23:59:00",
             "max_marks": 10,
         },
     )

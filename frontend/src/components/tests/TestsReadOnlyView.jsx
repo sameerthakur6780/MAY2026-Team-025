@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import EmptyState from "@/components/EmptyState";
 import { api } from "@/lib/apiClient";
+import { formatDateTime } from "@/lib/utils";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -52,13 +53,6 @@ export default function TestsReadOnlyView() {
     loadAll();
   }, []);
 
-  useEffect(() => {
-    const running = tests.some((t) => t.evaluation_status === "running");
-    if (!running) return undefined;
-    const timer = setInterval(loadAll, 5000);
-    return () => clearInterval(timer);
-  }, [tests]);
-
   if (loading) {
     return (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
@@ -85,8 +79,13 @@ export default function TestsReadOnlyView() {
                 <div>
                   <div className="font-medium text-foreground">{t.title}</div>
                   <div className="text-xs text-muted-foreground mt-0.5">
-                    Grade {t.grade} &middot; {t.subject_name} &middot; Due {t.due_date}
+                    Grade {t.grade} &middot; {t.subject_name} &middot; Due {formatDateTime(t.due_date)}
                   </div>
+                  {evalInfo?.evaluation_scheduled_at && (
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      Evaluation {formatDateTime(evalInfo.evaluation_scheduled_at)}
+                    </div>
+                  )}
                   <div className="text-xs text-muted-foreground mt-0.5">By {t.creator_name}</div>
                 </div>
                 <Badge className={status.className}>{status.label}</Badge>

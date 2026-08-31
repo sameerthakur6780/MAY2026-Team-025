@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import EmptyState from "@/components/EmptyState";
 import { api, ApiError } from "@/lib/apiClient";
 import { uploadWithProgress } from "@/lib/uploadWithProgress";
+import { defaultDueDatetimeValue, formatDateTime, toLocalDatetimeValue } from "@/lib/utils";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -30,7 +31,7 @@ function emptyForm() {
     class_id: "",
     subject_id: "",
     title: "",
-    due_date: "",
+    due_date: defaultDueDatetimeValue(),
     description: "",
     max_marks: "100",
   };
@@ -48,11 +49,6 @@ function validateFile(file) {
     return "File is empty";
   }
   return null;
-}
-
-function toLocalDatetimeValue(date) {
-  const pad = (n) => String(n).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
 async function uploadResource(file, type, classId, subjectId) {
@@ -126,13 +122,6 @@ export default function TestsManageView() {
     loadAll();
   }, []);
 
-  useEffect(() => {
-    const running = tests.some((t) => t.evaluation_status === "running");
-    if (!running) return undefined;
-    const timer = setInterval(loadAll, 5000);
-    return () => clearInterval(timer);
-  }, [tests]);
-
   const resetCreateDialog = () => {
     setForm(emptyForm());
     setQuestionPaper(null);
@@ -172,7 +161,7 @@ export default function TestsManageView() {
         subject_id: subjectId,
         title: form.title,
         description: form.description || null,
-        due_date: form.due_date,
+        due_date: new Date(form.due_date).toISOString(),
         max_marks: Number(form.max_marks),
         question_paper_resource_id: qpResource.id,
         answer_key_resource_id: akResource.id,
@@ -265,8 +254,8 @@ export default function TestsManageView() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label>Due date</Label>
-                  <Input type="date" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} />
+                  <Label>Due date & time</Label>
+                  <Input type="datetime-local" value={form.due_date} onChange={(e) => setForm({ ...form, due_date: e.target.value })} />
                 </div>
                 <div className="space-y-1.5">
                   <Label>Max marks</Label>
@@ -321,8 +310,13 @@ export default function TestsManageView() {
                     <div>
                       <div className="font-medium text-foreground">{t.title}</div>
                       <div className="text-xs text-muted-foreground mt-0.5">
-                        Grade {t.grade} &middot; {t.subject_name} &middot; Due {t.due_date}
+                        Grade {t.grade} &middot; {t.subject_name} &middot; Due {formatDateTime(t.due_date)}
                       </div>
+                      {evalInfo?.evaluation_scheduled_at && (
+                        <div className="text-xs text-muted-foreground mt-0.5">
+                          Evaluation {formatDateTime(evalInfo.evaluation_scheduled_at)}
+                        </div>
+                      )}
                     </div>
                     <Badge className={status.className}>{status.label}</Badge>
                   </div>

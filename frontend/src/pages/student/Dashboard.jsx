@@ -4,13 +4,16 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { STUDENT_NAV } from "@/lib/navConfig";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/apiClient";
+import { formatDateTime } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CalendarCheck, BookOpen, ArrowRight, Sparkles, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 
-function todayIso() {
-  return new Date().toISOString().slice(0, 10);
+function startOfToday() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return today;
 }
 
 const ATTENDANCE_STATUS_COLOR = { present: "text-lime", absent: "text-coral", late: "text-yellow" };
@@ -23,20 +26,20 @@ export default function StudentDashboard() {
   const [todayAttendance, setTodayAttendance] = useState(null);
 
   useEffect(() => {
-    const today = todayIso();
+    const today = startOfToday();
     Promise.all([
       api.get("/api/tests?per_page=100"),
       api.get("/api/homework?per_page=100"),
       api.get("/api/homework-submissions?per_page=100"),
-      api.get(`/api/attendance?date_from=${today}&date_to=${today}&per_page=1`),
+      api.get(`/api/attendance?date_from=${today.toISOString().slice(0, 10)}&date_to=${today.toISOString().slice(0, 10)}&per_page=1`),
     ])
       .then(([testsRes, hwRes, subRes, attendanceRes]) => {
         const submittedIds = new Set(subRes.items.map((s) => s.homework_id));
 
         setUpcomingTests(
           testsRes.items
-            .filter((t) => t.due_date >= today)
-            .sort((a, b) => a.due_date.localeCompare(b.due_date))
+            .filter((t) => new Date(t.due_date) >= today)
+            .sort((a, b) => new Date(a.due_date) - new Date(b.due_date))
             .slice(0, 5)
         );
         setPendingHomework(
@@ -92,7 +95,7 @@ export default function StudentDashboard() {
                           <div className="text-sm font-medium">{t.title}</div>
                           <div className="text-xs text-muted-foreground">{t.subject_name}</div>
                         </div>
-                        <div className="text-xs font-semibold text-coral shrink-0">Due {t.due_date}</div>
+                        <div className="text-xs font-semibold text-coral shrink-0">Due {formatDateTime(t.due_date)}</div>
                       </div>
                     ))}
                   </div>

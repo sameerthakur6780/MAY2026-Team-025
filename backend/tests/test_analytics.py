@@ -3,7 +3,7 @@ for the dashboard. Attendance/homework/test rows are created directly
 against the DB (bypassing the relevant create/mark endpoints) since these
 are read-only endpoints and the point here is exercising the aggregation
 and scoping logic, not re-testing attendance/grading creation paths."""
-from datetime import date, datetime
+from datetime import date, datetime, time
 
 from conftest import (
     create_assignment,
@@ -68,7 +68,7 @@ def _test_row(school_class, subject, teacher_user_id, due_date=None, max_marks=1
         class_id=school_class.id,
         subject_id=subject.id,
         title="Test",
-        due_date=due_date or date(2026, 1, 1),
+        due_date=due_date or datetime.combine(date(2026, 1, 1), time(23, 59)),
         created_by=teacher_user_id,
         max_marks=max_marks,
     )
