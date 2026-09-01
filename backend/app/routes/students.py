@@ -2,8 +2,7 @@ from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt
 from marshmallow import ValidationError
 
-from app.schemas.auth_schema import SignupSchema
-from app.schemas.student_schema import StudentUpdateSchema
+from app.schemas.student_schema import StudentCreateSchema, StudentUpdateSchema
 from app.services.student_service import (
     create_student,
     delete_student,
@@ -20,7 +19,7 @@ from app.utils.pagination import paginate_query
 
 students_bp = Blueprint("students", __name__, url_prefix="/api/students")
 
-_signup_schema = SignupSchema()
+_create_schema = StudentCreateSchema()
 _update_schema = StudentUpdateSchema()
 
 
@@ -61,9 +60,8 @@ def get_student(student_id):
 @role_required("admin")
 def create_student_route():
     raw = request.get_json(silent=True) or {}
-    raw["role"] = "student"
     try:
-        data = _signup_schema.load(raw)
+        data = _create_schema.load(raw)
     except ValidationError as exc:
         return jsonify({"error": "validation_error", "message": exc.messages}), 400
 
