@@ -93,4 +93,8 @@ def create_managed_account(data):
 def _parse_date(value):
     if not value:
         return None
-    return date.fromisoformat(value)
+
+    if isinstance(value, date):
+        return value
+
+    return date.fromisoformat(str(value))

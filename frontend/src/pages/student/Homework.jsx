@@ -43,8 +43,7 @@ export default function StudentHomework() {
   const [submitting, setSubmitting] = useState(false);
   const [progress, setProgress] = useState(0);
 
-  const loadAll = () => {
-    setLoading(true);
+const loadAll = async () => {    setLoading(true);
     Promise.all([api.get("/api/homework?per_page=100"), api.get("/api/homework-submissions?per_page=100")])
       .then(([hwRes, subRes]) => {
         setHomework(hwRes.items);
@@ -100,7 +99,7 @@ export default function StudentHomework() {
       await uploadWithProgress(`/api/homework/${dialogHw.id}/submissions`, formData, setProgress);
       toast.success("Homework submitted");
       closeDialog();
-      loadAll();
+      await loadAll();
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Could not submit homework.");
     } finally {

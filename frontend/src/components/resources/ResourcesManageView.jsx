@@ -139,7 +139,7 @@ export default function ResourcesManageView() {
       await uploadWithProgress("/api/resources", formData, setProgress);
       toast.success("Resource uploaded");
       setDialogOpen(false);
-      refetch();
+      await refetch();
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Upload failed. Please try again.");
     } finally {
@@ -151,7 +151,7 @@ export default function ResourcesManageView() {
     try {
       await api.delete(`/api/resources/${deleteTarget.id}`);
       toast.success("Resource deleted");
-      refetch();
+      await refetch();
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Could not delete this resource.");
     }

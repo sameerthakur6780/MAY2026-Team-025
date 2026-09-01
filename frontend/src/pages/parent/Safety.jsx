@@ -23,7 +23,15 @@ const ICON_BY_TYPE = {
 const NEEDS_ATTENTION = new Set(["attendance_absent", "fee_due_reminder"]);
 
 function formatWhen(iso) {
-  return new Date(iso).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+  if (!iso) return "";
+
+  if (!iso.endsWith("Z")) {
+    iso = iso + "Z";
+  }
+
+  return new Date(iso).toLocaleString("en-IN", {
+    timeZone: "Asia/Kolkata",
+  });
 }
 
 export default function ParentSafety() {

@@ -59,8 +59,7 @@ export default function StudentTests() {
   const [submitting, setSubmitting] = useState(false);
   const [progress, setProgress] = useState(0);
 
-  const loadAll = () => {
-    setLoading(true);
+const loadAll = async () => {    setLoading(true);
     Promise.all([api.get("/api/tests?per_page=100"), api.get("/api/test-submissions?per_page=100")])
       .then(async ([testsRes, subRes]) => {
         setTests(testsRes.items);
@@ -130,7 +129,7 @@ export default function StudentTests() {
       await uploadWithProgress(`/api/tests/${dialogTest.id}/submissions`, formData, setProgress);
       toast.success("Test response submitted");
       closeDialog();
-      loadAll();
+      await loadAll();
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Could not submit response.");
     } finally {

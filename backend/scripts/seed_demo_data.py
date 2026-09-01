@@ -55,6 +55,8 @@ from app.models.resource import Resource, ResourceType  # noqa: E402
 from app.models.student import Student  # noqa: E402
 from app.models.teacher import Teacher  # noqa: E402
 from app.models.test import Test, TestSubmission  # noqa: E402
+# from app.models.test_evaluation import TestQuestionScore  # noqa: E402
+from app.models.test_evaluation import TestAnswerKeyQuestion, TestQuestionScore
 from app.models.user import RoleEnum, User  # noqa: E402
 from app.services.auth_service import create_managed_account  # noqa: E402
 from app.services.resource_service import create_resource  # noqa: E402
@@ -127,16 +129,21 @@ def wipe_storage_objects():
     if paths:
         print(f"Deleted {len(paths)} object(s) from Supabase storage...")
 
-
 def wipe_demo_data():
     print("Wiping existing data...")
+
     wipe_storage_objects()
+
     for model in (
         Notification,
         StudentFee,
         FeePlan,
+
+        TestQuestionScore,
+        TestAnswerKeyQuestion,
         TestSubmission,
         Test,
+
         Submission,
         Homework,
         Attendance,
@@ -150,6 +157,7 @@ def wipe_demo_data():
         User,
     ):
         model.query.delete()
+
     db.session.commit()
 
 

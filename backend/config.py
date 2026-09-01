@@ -81,7 +81,7 @@ class Config:
     # uses -- set SUPABASE_URL on Render for a name that actually matches
     # the other two SUPABASE_* vars.
     SUPABASE_URL = os.environ.get("SUPABASE_URL") or os.environ.get("PROJECT_URL")
-    SUPABASE_URL = os.environ.get("PROJECT_URL")
+    # SUPABASE_URL = os.environ.get("PROJECT_URL")
     DB_PASSWORD = os.environ.get("DB_PASSWORD")
     SUPABASE_DB_POOLER_HOST = os.environ.get("SUPABASE_DB_POOLER_HOST")
     SUPABASE_DB_REGION = os.environ.get("SUPABASE_DB_REGION")
