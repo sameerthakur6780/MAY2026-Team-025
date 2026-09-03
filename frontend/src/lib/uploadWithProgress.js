@@ -1,4 +1,4 @@
-import { ApiError, BASE_URL, formatErrorMessage, getCsrfToken } from "@/lib/apiClient";
+import { ApiError, BASE_URL, clearGetCache, formatErrorMessage, getCsrfToken } from "@/lib/apiClient";
 
 export function uploadWithProgress(path, formData, onProgress) {
   return new Promise((resolve, reject) => {
@@ -26,6 +26,7 @@ export function uploadWithProgress(path, formData, onProgress) {
       }
 
       if (xhr.status >= 200 && xhr.status < 300) {
+        clearGetCache();
         resolve(data);
       } else {
         reject(

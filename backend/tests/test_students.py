@@ -174,6 +174,38 @@ def test_create_student_success(admin):
     assert body["status"] == "active"
 
 
+def test_create_student_without_phone_success(admin):
+    resp = admin.post(
+        "/api/students",
+        json={
+            "full_name": "No Phone Student",
+            "email": "nophone@test.com",
+            "password": "Password123",
+            "admission_no": "ADM-501",
+        },
+    )
+    assert resp.status_code == 201
+    body = resp.get_json()
+    assert body["phone"] is None
+    assert body["admission_no"] == "ADM-501"
+
+
+def test_create_student_invalid_phone_format_validation_error(admin):
+    resp = admin.post(
+        "/api/students",
+        json={
+            "full_name": "Bad Phone",
+            "email": "badphone-student@test.com",
+            "password": "Password123",
+            "phone": "12345",
+            "admission_no": "ADM-502",
+        },
+    )
+    assert resp.status_code == 400
+    assert resp.get_json()["error"] == "validation_error"
+    assert "phone" in resp.get_json()["message"]
+
+
 def test_create_student_missing_admission_no_validation_error(admin):
     resp = admin.post(
         "/api/students", json={"full_name": "No Adm", "email": "noadm2@test.com", "password": "Password123"}
